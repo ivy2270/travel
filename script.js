@@ -27,7 +27,7 @@ createApp({
         const tabNames = { itinerary:'行程', expense:'記帳', wish:'許願', setting:'設定' };
         const tabIcons = { itinerary:'fa-calendar-days', expense:'fa-wallet', wish:'fa-wand-magic-sparkles', setting:'fa-gear' };
 
-        // 輔助工具
+        // --- 輔助工具 ---
         const isWishDone = (wish) => {
             if (typeof wish.isDone === 'boolean') return wish.isDone;
             return String(wish.isDone).toLowerCase() === 'true';
@@ -53,7 +53,7 @@ createApp({
 
         const rawToDateStr = (raw) => (raw && String(raw).includes('T')) ? raw.split('T')[0] : String(raw || "");
 
-        // --- 排序邏輯 ---
+        // --- 計算屬性 ---
         const filteredItinerary = computed(() => {
             let list = [];
             allData.value.itinerary.forEach(item => {
@@ -109,7 +109,26 @@ createApp({
             });
         });
 
-        // 圖片處理
+        // --- 圖片上傳與縮放 ---
+        const resizeImage = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let w = img.width, h = img.height, max = 1000;
+                        if (w > h && w > max) { h *= max/w; w = max; } else if (h > max) { w *= max/h; h = max; }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/webp', 0.8));
+                    };
+                };
+            });
+        };
+
         const compressAndUpload = async (event) => {
             const files = event.target.files;
             if (!files.length) return;
@@ -135,26 +154,7 @@ createApp({
             uploading.value = false;
         };
 
-        const resizeImage = (file) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.src = e.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let w = img.width, h = img.height, max = 1000;
-                        if (w > h && w > max) { h *= max/w; w = max; } else if (h > max) { w *= max/h; h = max; }
-                        canvas.width = w; canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        resolve(canvas.toDataURL('image/webp', 0.8));
-                    };
-                };
-            });
-        };
-
-        // 資料同步與儲存
+        // --- 資料操作 ---
         const fetchData = async () => {
             if (!allData.value.itinerary.length) loading.value = true; 
             try {
@@ -184,7 +184,20 @@ createApp({
             } catch (e) { alert("儲存失敗"); } finally { loading.value = false; }
         };
 
+        // --- 燈箱切換邏輯 ---
+        const prevPhoto = () => {
+            if (lightboxUrls.value.length === 0) return;
+            lightboxIndex.value = (lightboxIndex.value - 1 + lightboxUrls.value.length) % lightboxUrls.value.length;
+            lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
+        };
+        const nextPhoto = () => {
+            if (lightboxUrls.value.length === 0) return;
+            lightboxIndex.value = (lightboxIndex.value + 1) % lightboxUrls.value.length;
+            lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
+        };
+
         onMounted(() => {
+            // 讀取快取
             const cachedData = localStorage.getItem('travel_pro_cache');
             if (cachedData) {
                 try {
@@ -195,6 +208,24 @@ createApp({
                 } catch (e) { console.error("快取解析失敗"); }
             }
             fetchData();
+
+            // --- 鍵盤與滑動監聽整合 ---
+            window.addEventListener('keydown', (e) => {
+                if (lightboxUrl.value) {
+                    if (e.key === 'ArrowLeft') prevPhoto();
+                    if (e.key === 'ArrowRight') nextPhoto();
+                    if (e.key === 'Escape') lightboxUrl.value = null;
+                }
+            });
+
+            let touchstartX = 0;
+            window.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, false);
+            window.addEventListener('touchend', e => {
+                if (!lightboxUrl.value) return;
+                let touchendX = e.changedTouches[0].screenX;
+                if (touchendX < touchstartX - 60) nextPhoto();
+                if (touchendX > touchstartX + 60) prevPhoto();
+            }, false);
         });
 
         return { 
@@ -236,33 +267,20 @@ createApp({
             deleteItem: async (sheet, id) => { if(confirm("確定刪除？")) { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteData', id, sheet }) }); fetchData(); } },
             toggleWishDone: async (wish) => { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateData', data: { ...wish, isDone: !isWishDone(wish) }, id: wish.id, sheet: 'Wishes' }) }); fetchData(); },
             saveSettings: async () => { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateSettings', data: { ...settingForm.value, rates: localRates.value } }) }); alert("設定已儲存"); fetchData(); },
-            openGoogleMaps: (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'),
+            openGoogleMaps: (loc) => window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(loc)}`, '_blank'),
             linkify: (text) => text ? text.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (url) => `<a href="${url}" target="_blank" class="text-blue-500 underline break-all">${url}</a>`) : "",
             parseImages, removeImage: (idx) => { if(currentTab.value==='expense') form.value.image=''; else form.value.image.splice(idx,1); },
             compressAndUpload, isItemSelected: (it, f) => (form.value[f] || "").split(',').includes(it),
             toggleSelection: (it, f) => { let c = (form.value[f] || "").split(',').filter(x => x); const i = c.indexOf(it); if (i > -1) c.splice(i, 1); else c.push(it); form.value[f] = c.join(','); },
             toggleTagFilter: (t) => { const i = selectedWishTags.value.indexOf(t); if (i > -1) selectedWishTags.value.splice(i, 1); else selectedWishTags.value.push(t); },
-openLightbox: (images, index) => {
-    // 確保 images 轉換為數組
-    const urls = Array.isArray(images) ? images : parseImages(images);
-    if (!urls || urls.length === 0) return;
-    
-    lightboxUrls.value = urls;
-    lightboxIndex.value = index;
-    lightboxUrl.value = urls[index];
-},
-prevPhoto: () => {
-    if (lightboxUrls.value.length === 0) return;
-    // 循環：如果第一張再往回，就跳到最後一張
-    lightboxIndex.value = (lightboxIndex.value - 1 + lightboxUrls.value.length) % lightboxUrls.value.length;
-    lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
-},
-nextPhoto: () => {
-    if (lightboxUrls.value.length === 0) return;
-    // 循環：如果最後一張再往後，就回到第一張
-    lightboxIndex.value = (lightboxIndex.value + 1) % lightboxUrls.value.length;
-    lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
-},
+            openLightbox: (images, index) => {
+                const urls = Array.isArray(images) ? images : parseImages(images);
+                if (!urls || urls.length === 0) return;
+                lightboxUrls.value = urls;
+                lightboxIndex.value = index;
+                lightboxUrl.value = urls[index];
+            },
+            prevPhoto, nextPhoto,
             expandedItems, toggleExpand: (id) => { const i = expandedItems.value.indexOf(id); if (i > -1) expandedItems.value.splice(i, 1); else expandedItems.value.push(id); },
             isWishDone
         };

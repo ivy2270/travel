@@ -83,6 +83,13 @@ createApp({
                 return matchPayer && matchDebtor;
             }).sort((a,b) => rawToDateStr(b.date).localeCompare(rawToDateStr(a.date)) || (Number(b.id) - Number(a.id)));
         });
+        
+        const filteredTotalTWD = computed(() => {
+            const total = sortedExpensesByFilter.value.reduce((sum, exp) => {
+                return sum + Number(exp.twd || 0);
+            }, 0);
+            return `NT$ ${total.toLocaleString()}`;
+        });
 
         const filteredWishes = computed(() => {
             let results = [...allData.value.wishes].filter(wish => {
@@ -197,7 +204,6 @@ createApp({
         };
 
         onMounted(() => {
-            // 讀取快取
             const cachedData = localStorage.getItem('travel_pro_cache');
             if (cachedData) {
                 try {
@@ -209,7 +215,6 @@ createApp({
             }
             fetchData();
 
-            // --- 鍵盤與滑動監聽整合 ---
             window.addEventListener('keydown', (e) => {
                 if (lightboxUrl.value) {
                     if (e.key === 'ArrowLeft') prevPhoto();
@@ -228,8 +233,46 @@ createApp({
             }, false);
         });
 
+        // --- 待辦功能新增函數 ---
+        const insertTodoTag = () => {
+            const prefix = "- [ ] ";
+            if (!form.value.content) form.value.content = prefix;
+            else form.value.content += (form.value.content.endsWith('\n') ? '' : '\n') + prefix;
+            setTimeout(() => document.getElementById('wishContent')?.focus(), 50);
+        };
+
+        const handleWishKeydown = (e) => {
+            if (e.key === 'Enter') {
+                const el = e.target;
+                const start = el.selectionStart;
+                const value = el.value;
+                const lastLine = value.substring(0, start).split('\n').pop();
+                if (lastLine.startsWith('- [ ] ') || lastLine.startsWith('- [x] ')) {
+                    e.preventDefault();
+                    const insertText = '\n- [ ] ';
+                    form.value.content = value.substring(0, start) + insertText + value.substring(el.selectionEnd);
+                    setTimeout(() => { el.selectionStart = el.selectionEnd = start + insertText.length; }, 0);
+                }
+            }
+        };
+
+        const toggleSubTodo = async (wish, index) => {
+            let lines = wish.content.split('\n');
+            let todoLines = lines.filter(line => line.trim().startsWith('- ['));
+            let targetLine = todoLines[index];
+            todoLines[index] = targetLine.includes('- [ ]') ? targetLine.replace('- [ ]', '- [x]') : targetLine.replace('- [x]', '- [ ]');
+            let todoIdx = 0;
+            const newContent = lines.map(line => line.trim().startsWith('- [') ? todoLines[todoIdx++] : line).join('\n');
+            loading.value = true;
+            await fetch(GAS_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: 'updateData', data: { ...wish, content: newContent }, id: wish.id, sheet: 'Wishes' }) 
+            });
+            fetchData();
+        };
+
         return { 
-            currentTab, loading, uploading, uploadProgress, allData, tabNames, tabIcons, filteredItinerary, sortedExpensesByFilter, filteredWishes,
+            currentTab, loading, uploading, uploadProgress, allData, tabNames, tabIcons, filteredItinerary, sortedExpensesByFilter, filteredTotalTWD, filteredWishes,
             availableDates: computed(() => [...new Set(allData.value.itinerary.map(i => rawToDateStr(i.day)))].filter(d => d && !d.includes('1899')).sort()),
             filterDate, debtFilter, showModal, isEditing, form, 
             travelersAndCats: computed(() => ({ 
@@ -282,7 +325,19 @@ createApp({
             },
             prevPhoto, nextPhoto,
             expandedItems, toggleExpand: (id) => { const i = expandedItems.value.indexOf(id); if (i > -1) expandedItems.value.splice(i, 1); else expandedItems.value.push(id); },
-            isWishDone
+            isWishDone,
+            // 暴露新函數給 HTML 使用
+            insertTodoTag,
+            handleWishKeydown,
+            toggleSubTodo,
+            hasTodos: (text) => text && text.includes('- ['),
+            parseTodos: (text) => {
+                if (!text) return [];
+                return text.split('\n').filter(line => line.trim().startsWith('- [')).map(line => ({
+                    done: line.trim().startsWith('- [x]'),
+                    text: line.replace(/- \[[x ]\]/, '').trim()
+                }));
+            }
         };
     }
 }).mount('#app');

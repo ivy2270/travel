@@ -229,3 +229,18 @@ th, td { padding: 12px 10px !important; }
 }
 input[type="number"] { -moz-appearance: textfield; min-width: 0; }
 input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* 擴大箭頭點擊熱區，並確保預覽圖層可以接收手勢 */
+.pswp__button--arrow--left, .pswp__button--arrow--right {
+    width: 60px !important;
+    height: 100px !important;
+    background-color: rgba(0,0,0,0.05) !important; /* 淡淡的底色讓箭頭更明顯 */
+}
+
+/* 確保預覽時的圖片容器具備抓取手勢 */
+.pswp__img {
+    cursor: grab !important;
+}
+.pswp__img:active {
+    cursor: grabbing !important;
+}

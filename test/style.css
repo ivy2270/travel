@@ -342,3 +342,29 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
 }
 
 [v-cloak] { display: none; }
+
+/* 許願標籤容器 */
+.wish-tags-container {
+    /* padding 上下增加，特別是下方，給滑桿留空間 */
+    padding: 12px 0 4px 0; 
+    background: rgba(248, 250, 252, 0.5); 
+    border-radius: 16px;
+    margin-bottom: 10px !important;
+    /* 確保橫向捲動流暢 */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 針對 Android 手機可能會出現的滑桿進行美化 */
+.wish-tags-container::-webkit-scrollbar {
+    height: 4px; /* 設定滑桿高度 */
+}
+
+.wish-tags-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.05); /* 極淡的滑桿顏色 */
+    border-radius: 10px;
+}
+
+/* 讓標籤不要緊貼容器邊緣 */
+.flex-nowrap.pb-3 {
+    padding-bottom: 12px !important; /* 這行是關鍵：把滑桿往下推 */
+}

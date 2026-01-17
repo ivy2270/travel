@@ -331,14 +331,31 @@ const handleTouchEndImg = (e) => {
                 }
             });
 
-window.addEventListener('touchstart', (e) => {
-    // 新增：檢查是否點擊在含有橫向捲動的表格容器內
-    // 假設你的 HTML 表格外面包了一層 class="overflow-x-auto"
-    const isInsideTable = e.target.closest('.overflow-x-auto');
+// --- 在 onMounted 內部的監聽器部分 ---
 
-    // 如果在燈箱、彈窗、表格捲動區、或文字輸入區，不記錄座標（就不會觸發 handleSwipe）
-    if (lightboxUrl.value || showModal.value || isInsideTable || e.target.closest('textarea') || e.target.closest('input')) {
-        touchState.value.startX = 0; // 清除座標，確保 handleSwipe 不會執行
+window.addEventListener('touchstart', (e) => {
+    const target = e.target;
+    
+    const isInsideTable = target.closest('.table-container');
+    const isInsideItineraryDate = target.closest('.itinerary-date-filter');
+    const isInsideWishTags = target.closest('.wish-tags-container');
+    const isInsideCardSlider = target.closest('.card-image-slider'); // 偵測圖片區
+    const isInput = target.closest('textarea') || target.closest('input');
+
+    // --- 關鍵修正：確保 isInsideCardSlider 有放進判斷式 ---
+    if (
+        lightboxUrl.value || 
+        showModal.value || 
+        isInsideTable || 
+        isInsideItineraryDate || 
+        isInsideWishTags || 
+        isInsideCardSlider ||  // <-- 之前漏掉這行
+        isInput
+    ) {
+        touchState.value.startX = 0; 
+        
+        // 偵錯用
+        if (isInsideCardSlider) console.log("圖片滑動中：已鎖定分頁切換");
         return;
     }
     
@@ -346,12 +363,21 @@ window.addEventListener('touchstart', (e) => {
     touchState.value.startY = e.touches[0].clientY;
 }, { passive: true });
 
-            window.addEventListener('touchend', (e) => {
-                if (lightboxUrl.value || showModal.value) return;
-                touchState.value.endX = e.changedTouches[0].clientX;
-                touchState.value.endY = e.changedTouches[0].clientY;
-                handleSwipe();
-            }, { passive: true });
+window.addEventListener('touchend', (e) => {
+    if (lightboxUrl.value || showModal.value || touchState.value.startX === 0) return;
+    
+    touchState.value.endX = e.changedTouches[0].clientX;
+    touchState.value.endY = e.changedTouches[0].clientY;
+    
+    // 計算滑動量
+    const diffX = touchState.value.startX - touchState.value.endX;
+    const diffY = touchState.value.startY - touchState.value.endY;
+    
+    // 顯示滑動數據到 Console
+    console.log(`滑動距離 - X: ${Math.round(diffX)}px, Y: ${Math.round(diffY)}px`);
+    
+    handleSwipe();
+}, { passive: true });
         });
 
         // --- 8. 待辦與功能函數 ---

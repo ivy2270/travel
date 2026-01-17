@@ -135,8 +135,8 @@ createApp({
         // --- 5. 燈箱與分頁核心手勢邏輯 ---
         const handleSwipe = () => {
             if (zoomScale.value > 1.1) return; // 縮放時不切換分頁
-            const swipeThreshold = 75;
-            const verticalLimit = 35;
+            const swipeThreshold = 100;
+            const verticalLimit = 40;
             const diffX = touchState.value.startX - touchState.value.endX;
             const diffY = touchState.value.startY - touchState.value.endY;
 
@@ -331,19 +331,42 @@ const handleTouchEndImg = (e) => {
                 }
             });
 
-            window.addEventListener('touchstart', (e) => {
-                // 如果在燈箱、彈窗、橫向捲動區、或文字輸入區，不觸發分頁滑動
-                if (lightboxUrl.value || showModal.value || e.target.closest('.overflow-x-auto') || e.target.closest('textarea') || e.target.closest('input')) return;
-                touchState.value.startX = e.touches[0].clientX;
-                touchState.value.startY = e.touches[0].clientY;
-            }, { passive: true });
+// --- 在 onMounted 內部的監聽器部分 ---
 
-            window.addEventListener('touchend', (e) => {
-                if (lightboxUrl.value || showModal.value) return;
-                touchState.value.endX = e.changedTouches[0].clientX;
-                touchState.value.endY = e.changedTouches[0].clientY;
-                handleSwipe();
-            }, { passive: true });
+window.addEventListener('touchstart', (e) => {
+    // 修正：檢查是否點擊在含有橫向捲動的表格容器內 (名稱需與 HTML 一致)
+    // 您的 HTML 使用的是 .table-container
+    const isInsideTable = e.target.closest('.table-container');
+
+    if (lightboxUrl.value || showModal.value || isInsideTable || e.target.closest('textarea') || e.target.closest('input')) {
+        touchState.value.startX = 0; 
+        // 在 Console 顯示為什麼沒觸發滑動 (開發偵錯用)
+        if (isInsideTable) console.log("偵測到在表格內滑動，已忽略分頁切換");
+        return;
+    }
+    
+    touchState.value.startX = e.touches[0].clientX;
+    touchState.value.startY = e.touches[0].clientY;
+    
+    // 顯示起始點
+    console.log(`Touch Start at: ${touchState.value.startX}`);
+}, { passive: true });
+
+window.addEventListener('touchend', (e) => {
+    if (lightboxUrl.value || showModal.value || touchState.value.startX === 0) return;
+    
+    touchState.value.endX = e.changedTouches[0].clientX;
+    touchState.value.endY = e.changedTouches[0].clientY;
+    
+    // 計算滑動量
+    const diffX = touchState.value.startX - touchState.value.endX;
+    const diffY = touchState.value.startY - touchState.value.endY;
+    
+    // 顯示滑動數據到 Console
+    console.log(`滑動距離 - X: ${Math.round(diffX)}px, Y: ${Math.round(diffY)}px`);
+    
+    handleSwipe();
+}, { passive: true });
         });
 
         // --- 8. 待辦與功能函數 ---

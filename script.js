@@ -1,8 +1,9 @@
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, watch } = Vue;
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzsM5ji2zztA6-EeCBUzTpVdN9bcom4RrVej8_imJABKmyZ0VWOSLY8DNv2ZL1KcOVG/exec"; 
 
 createApp({
     setup() {
+        // --- 1. 基礎狀態 ---
         const currentTab = ref('itinerary');
         const loading = ref(false);
         const uploading = ref(false); 
@@ -14,11 +15,22 @@ createApp({
         const wishSearchQuery = ref(""); 
         const debtFilter = ref({ payer: 'all', debtor: 'all' });
         
+        // --- 2. 燈箱與手勢狀態 ---
         const lightboxUrl = ref(null); 
         const lightboxUrls = ref([]); 
         const lightboxIndex = ref(0); 
-        const expandedItems = ref([]); 
+        const zoomScale = ref(1);
+        const lastScale = ref(1);
+        const offsetX = ref(0);
+        const offsetY = ref(0);
+        const touchStartDist = ref(0);
+        const touchStartPoint = ref({ x: 0, y: 0 });
+        const isDragging = ref(false);
 
+        // 分頁切換座標
+        const touchState = ref({ startX: 0, startY: 0, endX: 0, endY: 0 });
+
+        const expandedItems = ref([]); 
         const allData = ref({ itinerary: [], expenses: [], wishes: [], settings: {} });
         const form = ref({});
         const settingForm = ref({ travelers: "", categories: "", wishTags: "", paymentMethods: "現金, 信用卡" });
@@ -27,8 +39,9 @@ createApp({
         const tabNames = { itinerary:'行程', expense:'記帳', wish:'許願', setting:'設定' };
         const tabIcons = { itinerary:'fa-calendar-days', expense:'fa-wallet', wish:'fa-wand-magic-sparkles', setting:'fa-gear' };
 
-        // --- 輔助工具 ---
+        // --- 3. 輔助工具 ---
         const isWishDone = (wish) => {
+            if (!wish) return false;
             if (typeof wish.isDone === 'boolean') return wish.isDone;
             return String(wish.isDone).toLowerCase() === 'true';
         };
@@ -44,19 +57,24 @@ createApp({
             if (!imgData) return [];
             let urls = [];
             try {
-                if (typeof imgData === 'string' && imgData.startsWith('[')) urls = JSON.parse(imgData);
+                if (typeof imgData === 'string' && (imgData.startsWith('[') || imgData.startsWith('{'))) urls = JSON.parse(imgData);
                 else if (typeof imgData === 'string') urls = imgData.split(',').filter(x => x);
                 else urls = Array.isArray(imgData) ? imgData : [imgData];
             } catch (e) { urls = [imgData]; }
-            return urls.map(url => getDirectImageUrl(String(url)));
+            return (Array.isArray(urls) ? urls : [urls]).map(url => getDirectImageUrl(String(url)));
         };
 
         const rawToDateStr = (raw) => (raw && String(raw).includes('T')) ? raw.split('T')[0] : String(raw || "");
 
-        // --- 計算屬性 ---
+        // --- 4. 計算屬性 ---
+        const zoomStyle = computed(() => ({
+            transform: `translate(${offsetX.value}px, ${offsetY.value}px) scale(${zoomScale.value})`,
+            transition: isDragging.value ? 'none' : 'transform 0.15s ease-out'
+        }));
+
         const filteredItinerary = computed(() => {
             let list = [];
-            allData.value.itinerary.forEach(item => {
+            (allData.value.itinerary || []).forEach(item => {
                 list.push({ ...item, isExtraDay: false });
                 if (item.category === '飯店' && item.duration > 1) {
                     for (let i = 1; i < item.duration; i++) {
@@ -76,7 +94,7 @@ createApp({
         });
 
         const sortedExpensesByFilter = computed(() => {
-            return [...allData.value.expenses].filter(exp => {
+            return [...(allData.value.expenses || [])].filter(exp => {
                 const matchPayer = debtFilter.value.payer === 'all' || exp.payer === debtFilter.value.payer;
                 const debtors = exp.debtor ? exp.debtor.split(',') : [];
                 const matchDebtor = debtFilter.value.debtor === 'all' || debtors.includes(debtFilter.value.debtor);
@@ -85,18 +103,16 @@ createApp({
         });
         
         const filteredTotalTWD = computed(() => {
-            const total = sortedExpensesByFilter.value.reduce((sum, exp) => {
-                return sum + Number(exp.twd || 0);
-            }, 0);
+            const total = sortedExpensesByFilter.value.reduce((sum, exp) => sum + Number(exp.twd || 0), 0);
             return `NT$ ${total.toLocaleString()}`;
         });
 
         const filteredWishes = computed(() => {
-            let results = [...allData.value.wishes].filter(wish => {
+            let results = [...(allData.value.wishes || [])].filter(wish => {
                 const matchTags = selectedWishTags.value.length === 0 || 
                     selectedWishTags.value.every(tag => (wish.tag || "").split(',').includes(tag));
                 const query = (wishSearchQuery.value || "").toLowerCase().trim();
-                const matchSearch = !query || wish.content.toLowerCase().includes(query) || (wish.tag && wish.tag.toLowerCase().includes(query));
+                const matchSearch = !query || (wish.content || "").toLowerCase().includes(query) || (wish.tag && wish.tag.toLowerCase().includes(query));
                 return matchTags && matchSearch;
             });
             return results.sort((a, b) => {
@@ -116,7 +132,98 @@ createApp({
             });
         });
 
-        // --- 圖片上傳與縮放 ---
+        // --- 5. 燈箱與分頁核心手勢邏輯 ---
+        const handleSwipe = () => {
+            if (zoomScale.value > 1.1) return; // 縮放時不切換分頁
+            const swipeThreshold = 100;
+            const verticalLimit = 40;
+            const diffX = touchState.value.startX - touchState.value.endX;
+            const diffY = touchState.value.startY - touchState.value.endY;
+
+            if (Math.abs(diffX) > swipeThreshold && 
+                Math.abs(diffY) < verticalLimit && 
+                Math.abs(diffX) > Math.abs(diffY) * 3) {
+                
+                const tabs = Object.keys(tabNames);
+                let currentIndex = tabs.indexOf(currentTab.value);
+
+                if (diffX > 0 && currentIndex < tabs.length - 1) {
+                    currentTab.value = tabs[currentIndex + 1];
+                } else if (diffX < 0 && currentIndex > 0) {
+                    currentTab.value = tabs[currentIndex - 1];
+                }
+            }
+        };
+
+// 1. 在 setup 內增加一個專門給燈箱用的 touch 狀態
+const imgTouchState = ref({ startX: 0, startY: 0 });
+
+const handleTouchStartImg = (e) => {
+    if (e.touches.length === 2) {
+        touchStartDist.value = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+    } else if (e.touches.length === 1) {
+        // 記錄起始點，用來判斷滑動方向
+        imgTouchState.value.startX = e.touches[0].pageX;
+        imgTouchState.value.startY = e.touches[0].pageY;
+
+        if (zoomScale.value > 1) {
+            isDragging.value = true;
+            touchStartPoint.value = {
+                x: e.touches[0].pageX - offsetX.value,
+                y: e.touches[0].pageY - offsetY.value
+            };
+        }
+    }
+};
+
+const handleTouchMoveImg = (e) => {
+    if (e.touches.length === 2) {
+        const currentDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        const scale = (currentDist / touchStartDist.value) * lastScale.value;
+        zoomScale.value = Math.min(Math.max(scale, 1), 4);
+    } else if (e.touches.length === 1 && isDragging.value) {
+        offsetX.value = e.touches[0].pageX - touchStartPoint.value.x;
+        offsetY.value = e.touches[0].pageY - touchStartPoint.value.y;
+    }
+};
+
+const handleTouchEndImg = (e) => {
+    isDragging.value = false;
+    lastScale.value = zoomScale.value;
+
+    // --- 關鍵：加入左右滑動切換邏輯 ---
+    if (zoomScale.value <= 1.1) { // 只有在沒放大或微放大時才允許切換
+        const endX = e.changedTouches[0].pageX;
+        const diffX = imgTouchState.value.startX - endX;
+        const swipeThreshold = 50; // 滑動超過 50px 就切換
+
+        if (Math.abs(diffX) > swipeThreshold) {
+            if (diffX > 0) {
+                nextPhoto(); // 向左滑，看下一張
+            } else {
+                prevPhoto(); // 向右滑，看前一張
+            }
+        }
+        
+        // 重置位移（確保切換後圖片置中）
+        zoomScale.value = 1; 
+        lastScale.value = 1;
+        offsetX.value = 0; 
+        offsetY.value = 0;
+    } else if (zoomScale.value <= 1.05) {
+        // 如果只是輕微縮放，放開後彈回原狀
+        zoomScale.value = 1; lastScale.value = 1;
+        offsetX.value = 0; offsetY.value = 0;
+    }
+};
+
+        // --- 6. 圖片與資料處理 ---
         const resizeImage = (file) => {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -161,7 +268,6 @@ createApp({
             uploading.value = false;
         };
 
-        // --- 資料操作 ---
         const fetchData = async () => {
             if (!allData.value.itinerary.length) loading.value = true; 
             try {
@@ -191,18 +297,20 @@ createApp({
             } catch (e) { alert("儲存失敗"); } finally { loading.value = false; }
         };
 
-        // --- 燈箱切換邏輯 ---
         const prevPhoto = () => {
+            if (zoomScale.value > 1.1) return; 
             if (lightboxUrls.value.length === 0) return;
             lightboxIndex.value = (lightboxIndex.value - 1 + lightboxUrls.value.length) % lightboxUrls.value.length;
             lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
         };
         const nextPhoto = () => {
+            if (zoomScale.value > 1.1) return; 
             if (lightboxUrls.value.length === 0) return;
             lightboxIndex.value = (lightboxIndex.value + 1) % lightboxUrls.value.length;
             lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
         };
 
+        // --- 7. 生命周期與全局監聽 ---
         onMounted(() => {
             const cachedData = localStorage.getItem('travel_pro_cache');
             if (cachedData) {
@@ -223,17 +331,30 @@ createApp({
                 }
             });
 
-            let touchstartX = 0;
-            window.addEventListener('touchstart', e => { touchstartX = e.changedTouches[0].screenX; }, false);
-            window.addEventListener('touchend', e => {
-                if (!lightboxUrl.value) return;
-                let touchendX = e.changedTouches[0].screenX;
-                if (touchendX < touchstartX - 60) nextPhoto();
-                if (touchendX > touchstartX + 60) prevPhoto();
-            }, false);
+window.addEventListener('touchstart', (e) => {
+    // 新增：檢查是否點擊在含有橫向捲動的表格容器內
+    // 假設你的 HTML 表格外面包了一層 class="overflow-x-auto"
+    const isInsideTable = e.target.closest('.overflow-x-auto');
+
+    // 如果在燈箱、彈窗、表格捲動區、或文字輸入區，不記錄座標（就不會觸發 handleSwipe）
+    if (lightboxUrl.value || showModal.value || isInsideTable || e.target.closest('textarea') || e.target.closest('input')) {
+        touchState.value.startX = 0; // 清除座標，確保 handleSwipe 不會執行
+        return;
+    }
+    
+    touchState.value.startX = e.touches[0].clientX;
+    touchState.value.startY = e.touches[0].clientY;
+}, { passive: true });
+
+            window.addEventListener('touchend', (e) => {
+                if (lightboxUrl.value || showModal.value) return;
+                touchState.value.endX = e.changedTouches[0].clientX;
+                touchState.value.endY = e.changedTouches[0].clientY;
+                handleSwipe();
+            }, { passive: true });
         });
 
-        // --- 待辦功能新增函數 ---
+        // --- 8. 待辦與功能函數 ---
         const insertTodoTag = () => {
             const prefix = "- [ ] ";
             if (!form.value.content) form.value.content = prefix;
@@ -245,12 +366,11 @@ createApp({
             if (e.key === 'Enter') {
                 const el = e.target;
                 const start = el.selectionStart;
-                const value = el.value;
-                const lastLine = value.substring(0, start).split('\n').pop();
+                const lastLine = el.value.substring(0, start).split('\n').pop();
                 if (lastLine.startsWith('- [ ] ') || lastLine.startsWith('- [x] ')) {
                     e.preventDefault();
                     const insertText = '\n- [ ] ';
-                    form.value.content = value.substring(0, start) + insertText + value.substring(el.selectionEnd);
+                    form.value.content = el.value.substring(0, start) + insertText + el.value.substring(el.selectionEnd);
                     setTimeout(() => { el.selectionStart = el.selectionEnd = start + insertText.length; }, 0);
                 }
             }
@@ -258,22 +378,27 @@ createApp({
 
         const toggleSubTodo = async (wish, index) => {
             let lines = wish.content.split('\n');
-            let todoLines = lines.filter(line => line.trim().startsWith('- ['));
-            let targetLine = todoLines[index];
-            todoLines[index] = targetLine.includes('- [ ]') ? targetLine.replace('- [ ]', '- [x]') : targetLine.replace('- [x]', '- [ ]');
-            let todoIdx = 0;
-            const newContent = lines.map(line => line.trim().startsWith('- [') ? todoLines[todoIdx++] : line).join('\n');
+            let todoCount = 0;
+            const newLines = lines.map(line => {
+                if (line.trim().startsWith('- [')) {
+                    if (todoCount === index) {
+                        line = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace('[x]', '[ ]');
+                    }
+                    todoCount++;
+                }
+                return line;
+            });
             loading.value = true;
             await fetch(GAS_URL, { 
                 method: 'POST', 
-                body: JSON.stringify({ action: 'updateData', data: { ...wish, content: newContent }, id: wish.id, sheet: 'Wishes' }) 
+                body: JSON.stringify({ action: 'updateData', data: { ...wish, content: newLines.join('\n') }, id: wish.id, sheet: 'Wishes' }) 
             });
             fetchData();
         };
 
         return { 
             currentTab, loading, uploading, uploadProgress, allData, tabNames, tabIcons, filteredItinerary, sortedExpensesByFilter, filteredTotalTWD, filteredWishes,
-            availableDates: computed(() => [...new Set(allData.value.itinerary.map(i => rawToDateStr(i.day)))].filter(d => d && !d.includes('1899')).sort()),
+            availableDates: computed(() => [...new Set((allData.value.itinerary || []).map(i => rawToDateStr(i.day)))].filter(d => d && !d.includes('1899')).sort()),
             filterDate, debtFilter, showModal, isEditing, form, 
             travelersAndCats: computed(() => ({ 
                 travelers: (settingForm.value.travelers || "").split(',').filter(x=>x),
@@ -281,7 +406,7 @@ createApp({
                 tags: (settingForm.value.wishTags || "").split(',').filter(x=>x),
                 paymentMethods: (settingForm.value.paymentMethods || "現金,信用卡").split(',').filter(x=>x)
             })), 
-            localRates, settingForm, selectedWishTags, wishSearchQuery, lightboxUrl, lightboxUrls,
+            localRates, settingForm, selectedWishTags, wishSearchQuery, lightboxUrl, lightboxUrls, zoomScale, zoomStyle,
             openAddModal: () => {
                 isEditing.value = false;
                 const today = new Date().toISOString().split('T')[0];
@@ -310,7 +435,7 @@ createApp({
             deleteItem: async (sheet, id) => { if(confirm("確定刪除？")) { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteData', id, sheet }) }); fetchData(); } },
             toggleWishDone: async (wish) => { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateData', data: { ...wish, isDone: !isWishDone(wish) }, id: wish.id, sheet: 'Wishes' }) }); fetchData(); },
             saveSettings: async () => { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateSettings', data: { ...settingForm.value, rates: localRates.value } }) }); alert("設定已儲存"); fetchData(); },
-            openGoogleMaps: (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'),
+            openGoogleMaps: (loc) => window.open(`https://www.google.com/maps/search/${encodeURIComponent(loc)}`, '_blank'),
             linkify: (text) => text ? text.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (url) => `<a href="${url}" target="_blank" class="text-blue-500 underline break-all">${url}</a>`) : "",
             parseImages, removeImage: (idx) => { if(currentTab.value==='expense') form.value.image=''; else form.value.image.splice(idx,1); },
             compressAndUpload, isItemSelected: (it, f) => (form.value[f] || "").split(',').includes(it),
@@ -322,14 +447,13 @@ createApp({
                 lightboxUrls.value = urls;
                 lightboxIndex.value = index;
                 lightboxUrl.value = urls[index];
+                zoomScale.value = 1; offsetX.value = 0; offsetY.value = 0; lastScale.value = 1;
             },
+            closeLightbox: () => { lightboxUrl.value = null; zoomScale.value = 1; },
             prevPhoto, nextPhoto,
+            handleTouchStartImg, handleTouchMoveImg, handleTouchEndImg,
             expandedItems, toggleExpand: (id) => { const i = expandedItems.value.indexOf(id); if (i > -1) expandedItems.value.splice(i, 1); else expandedItems.value.push(id); },
-            isWishDone,
-            // 暴露新函數給 HTML 使用
-            insertTodoTag,
-            handleWishKeydown,
-            toggleSubTodo,
+            isWishDone, insertTodoTag, handleWishKeydown, toggleSubTodo,
             hasTodos: (text) => text && text.includes('- ['),
             parseTodos: (text) => {
                 if (!text) return [];
@@ -341,4 +465,3 @@ createApp({
         };
     }
 }).mount('#app');
-

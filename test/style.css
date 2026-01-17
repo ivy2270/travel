@@ -340,3 +340,5 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
     user-select: none;
     -webkit-user-drag: none;
 }
+
+[v-cloak] { display: none; }

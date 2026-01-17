@@ -24,7 +24,7 @@
     
     <img :src="lightboxUrl" 
          class="max-w-full max-h-full object-contain shadow-2xl"
-         :style="zoomStyle"
+         :style="[zoomStyle, { touchAction: 'none' }]"
          @touchstart.stop="handleTouchStartImg"
          @touchmove.stop="handleTouchMoveImg"
          @touchend.stop="handleTouchEndImg">

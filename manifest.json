@@ -1,0 +1,17 @@
+{
+  "name": "拾光旅圖 Travel Pro",
+  "short_name": "拾光旅圖",
+  "description": "行程、記帳、許願，一站式旅遊管理工具",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

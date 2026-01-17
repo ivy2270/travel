@@ -34,7 +34,7 @@
 </div>
 
         <header v-if="['itinerary', 'wish'].includes(currentTab)" class="sticky top-0 z-40 bg-white/80 backdrop-blur-md shadow-sm">
-            <div v-if="currentTab === 'itinerary'" class="flex overflow-x-auto px-4 py-4 gap-3 no-scrollbar border-b">
+            <div v-if="currentTab === 'itinerary'" class="itinerary-date-filter flex overflow-x-auto px-4 py-4 gap-3 no-scrollbar border-b">
                 <div @click="filterDate = ''" :class="{'date-card active': filterDate === ''}" class="date-card flex-none bg-white border px-4 py-2 rounded-xl text-center shadow-sm min-w-[65px] cursor-pointer italic font-bold text-sm text-slate-400">全部</div>
                 <div v-for="d in availableDates" :key="d" @click="filterDate = d" :class="{'date-card active': filterDate === d}" class="date-card flex-none bg-white border px-3 py-2 rounded-xl text-center shadow-sm min-w-[85px] cursor-pointer transition-all">
                     <div class="text-[10px] opacity-60 font-bold uppercase">{{ getWeekday(d) }}</div>
@@ -42,18 +42,29 @@
                 </div>
             </div>
 
-            <div v-if="currentTab === 'wish'" class="space-y-3 py-4 border-b">
-                <div class="flex overflow-x-auto px-4 gap-2 no-scrollbar">
-                    <div v-for="tag in travelersAndCats.tags" :key="tag" @click="toggleTagFilter(tag)" :class="{'tag-filter active': selectedWishTags.includes(tag), 'bg-white text-slate-400 border': !selectedWishTags.includes(tag)}" class="flex-none px-4 py-1.5 rounded-full border text-xs font-bold cursor-pointer transition-all shadow-sm">#{{ tag }}</div>
-                </div>
-                <div class="px-4">
-                    <div class="relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
-                        <input v-model="wishSearchQuery" type="text" placeholder="搜尋願望內容或標籤..." class="w-full bg-slate-100 border-none rounded-2xl py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 ring-blue-500/20 transition-all">
-                        <button v-if="wishSearchQuery" @click="wishSearchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"><i class="fa-solid fa-circle-xmark"></i></button>
-                    </div>
-                </div>
+<div v-if="currentTab === 'wish'" class="space-y-3 py-4 border-b">
+    <div class="wish-tags-container flex overflow-x-auto px-4 no-scrollbar">
+        <div class="flex flex-nowrap gap-2 pb-3"> 
+            <div 
+                v-for="tag in travelersAndCats.tags" 
+                :key="tag" 
+                @click="toggleTagFilter(tag)" 
+                :class="selectedWishTags.includes(tag) ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-400 border-slate-200'" 
+                class="flex-none px-4 py-2 rounded-full border text-xs font-bold cursor-pointer transition-all active:scale-95 shadow-sm"
+            >
+                #{{ tag }}
             </div>
+        </div>
+    </div>
+
+    <div class="px-4">
+        <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 text-xs"></i>
+            <input v-model="wishSearchQuery" type="text" placeholder="搜尋願望內容或標籤..." class="w-full bg-slate-100 border-none rounded-2xl py-2.5 pl-10 pr-4 text-sm outline-none focus:ring-2 ring-blue-500/20 transition-all">
+            <button v-if="wishSearchQuery" @click="wishSearchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300"><i class="fa-solid fa-circle-xmark"></i></button>
+        </div>
+    </div>
+</div>
         </header>
 
         <main class="max-w-xl mx-auto p-4">

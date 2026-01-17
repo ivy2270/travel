@@ -155,43 +155,73 @@ createApp({
             }
         };
 
-        const handleTouchStartImg = (e) => {
-            if (e.touches.length === 2) {
-                touchStartDist.value = Math.hypot(
-                    e.touches[0].pageX - e.touches[1].pageX,
-                    e.touches[0].pageY - e.touches[1].pageY
-                );
-            } else if (e.touches.length === 1 && zoomScale.value > 1) {
-                isDragging.value = true;
-                touchStartPoint.value = {
-                    x: e.touches[0].pageX - offsetX.value,
-                    y: e.touches[0].pageY - offsetY.value
-                };
-            }
-        };
+// 1. 在 setup 內增加一個專門給燈箱用的 touch 狀態
+const imgTouchState = ref({ startX: 0, startY: 0 });
 
-        const handleTouchMoveImg = (e) => {
-            if (e.touches.length === 2) {
-                const currentDist = Math.hypot(
-                    e.touches[0].pageX - e.touches[1].pageX,
-                    e.touches[0].pageY - e.touches[1].pageY
-                );
-                const scale = (currentDist / touchStartDist.value) * lastScale.value;
-                zoomScale.value = Math.min(Math.max(scale, 1), 4);
-            } else if (e.touches.length === 1 && isDragging.value) {
-                offsetX.value = e.touches[0].pageX - touchStartPoint.value.x;
-                offsetY.value = e.touches[0].pageY - touchStartPoint.value.y;
-            }
-        };
+const handleTouchStartImg = (e) => {
+    if (e.touches.length === 2) {
+        touchStartDist.value = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+    } else if (e.touches.length === 1) {
+        // 記錄起始點，用來判斷滑動方向
+        imgTouchState.value.startX = e.touches[0].pageX;
+        imgTouchState.value.startY = e.touches[0].pageY;
 
-        const handleTouchEndImg = () => {
-            isDragging.value = false;
-            lastScale.value = zoomScale.value;
-            if (zoomScale.value <= 1.05) {
-                zoomScale.value = 1; lastScale.value = 1;
-                offsetX.value = 0; offsetY.value = 0;
+        if (zoomScale.value > 1) {
+            isDragging.value = true;
+            touchStartPoint.value = {
+                x: e.touches[0].pageX - offsetX.value,
+                y: e.touches[0].pageY - offsetY.value
+            };
+        }
+    }
+};
+
+const handleTouchMoveImg = (e) => {
+    if (e.touches.length === 2) {
+        const currentDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        const scale = (currentDist / touchStartDist.value) * lastScale.value;
+        zoomScale.value = Math.min(Math.max(scale, 1), 4);
+    } else if (e.touches.length === 1 && isDragging.value) {
+        offsetX.value = e.touches[0].pageX - touchStartPoint.value.x;
+        offsetY.value = e.touches[0].pageY - touchStartPoint.value.y;
+    }
+};
+
+const handleTouchEndImg = (e) => {
+    isDragging.value = false;
+    lastScale.value = zoomScale.value;
+
+    // --- 關鍵：加入左右滑動切換邏輯 ---
+    if (zoomScale.value <= 1.1) { // 只有在沒放大或微放大時才允許切換
+        const endX = e.changedTouches[0].pageX;
+        const diffX = imgTouchState.value.startX - endX;
+        const swipeThreshold = 50; // 滑動超過 50px 就切換
+
+        if (Math.abs(diffX) > swipeThreshold) {
+            if (diffX > 0) {
+                nextPhoto(); // 向左滑，看下一張
+            } else {
+                prevPhoto(); // 向右滑，看前一張
             }
-        };
+        }
+        
+        // 重置位移（確保切換後圖片置中）
+        zoomScale.value = 1; 
+        lastScale.value = 1;
+        offsetX.value = 0; 
+        offsetY.value = 0;
+    } else if (zoomScale.value <= 1.05) {
+        // 如果只是輕微縮放，放開後彈回原狀
+        zoomScale.value = 1; lastScale.value = 1;
+        offsetX.value = 0; offsetY.value = 0;
+    }
+};
 
         // --- 6. 圖片與資料處理 ---
         const resizeImage = (file) => {

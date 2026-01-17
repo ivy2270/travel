@@ -334,22 +334,35 @@ const handleTouchEndImg = (e) => {
 // --- 在 onMounted 內部的監聽器部分 ---
 
 window.addEventListener('touchstart', (e) => {
-    // 修正：檢查是否點擊在含有橫向捲動的表格容器內 (名稱需與 HTML 一致)
-    // 您的 HTML 使用的是 .table-container
-    const isInsideTable = e.target.closest('.table-container');
+    // 1. 先定義 target
+    const target = e.target;
+    
+    // 2. 找出需要「鎖定」不換頁的區域
+    // 檢查表格
+    const isInsideTable = target.closest('.table-container');
+    // 檢查行程上方日期 (使用我們剛加的 class)
+    const isInsideItineraryDate = target.closest('.itinerary-date-filter');
+    // 檢查許願標籤容器
+    const isInsideWishTags = target.closest('.wish-tags-container');
+    // 檢查輸入框
+    const isInput = target.closest('textarea') || target.closest('input');
 
-    if (lightboxUrl.value || showModal.value || isInsideTable || e.target.closest('textarea') || e.target.closest('input')) {
-        touchState.value.startX = 0; 
-        // 在 Console 顯示為什麼沒觸發滑動 (開發偵錯用)
-        if (isInsideTable) console.log("偵測到在表格內滑動，已忽略分頁切換");
+    // 3. 判斷是否要攔截
+    if (lightboxUrl.value || showModal.value || isInsideTable || isInsideItineraryDate || isInsideWishTags || isInput) {
+        touchState.value.startX = 0; // 歸零，防止觸發 swipe
+        
+        // 偵錯用訊息，確認是哪裡觸發了鎖定
+        if (isInsideItineraryDate) console.log("行程日期區：鎖定滑動換頁");
+        if (isInsideWishTags) console.log("許願標籤區：鎖定滑動換頁");
+        
         return;
     }
     
+    // 4. 正常區域：記錄起始點，開啟滑動換頁偵測
     touchState.value.startX = e.touches[0].clientX;
     touchState.value.startY = e.touches[0].clientY;
     
-    // 顯示起始點
-    console.log(`Touch Start at: ${touchState.value.startX}`);
+    console.log(`觸發滑動偵測，起點: ${touchState.value.startX}`);
 }, { passive: true });
 
 window.addEventListener('touchend', (e) => {

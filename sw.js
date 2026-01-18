@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-pro-v2'; // 1. 每次更新內容就改這個版本號
+const CACHE_NAME = 'travel-pro-v3'; // 1. 每次更新內容就改這個版本號
 const ASSETS = [
   './',
   './index.html',
@@ -37,3 +37,4 @@ self.addEventListener('fetch', (e) => {
     })
   );
 });
+

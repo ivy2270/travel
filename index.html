@@ -211,14 +211,19 @@
                 </div>
 
                 <div v-else class="space-y-2 mb-4">
-                    <div v-for="(todo, index) in parseTodos(wish.content)" :key="index" 
-                         @click.stop="toggleSubTodo(wish, index)"
-                         class="flex items-start gap-3 p-3 bg-slate-50/50 rounded-2xl hover:bg-slate-100 transition-all cursor-pointer border border-transparent hover:border-slate-200">
-                        <i :class="['fa-solid mt-0.5 shrink-0', todo.done ? 'fa-square-check text-blue-500' : 'fa-square text-slate-300']"></i>
-                        <span :class="['text-sm font-bold text-slate-700', {'line-through text-slate-400 opacity-60': todo.done}]">
-                            {{ todo.text }}
-                        </span>
-                    </div>
+<div v-for="(todo, index) in parseTodos(wish.content)" :key="index" 
+     @click.stop="toggleSubTodo(wish, index)"
+     class="flex items-start gap-3 p-3 bg-slate-50/50 rounded-2xl hover:bg-slate-100 transition-all cursor-pointer border border-transparent hover:border-slate-200">
+    
+    <div class="relative mt-0.5 shrink-0">
+        <i :class="['fa-solid transition-all duration-200', 
+                    todo.done ? 'fa-square-check text-blue-500 scale-110' : 'fa-square text-slate-300']"></i>
+    </div>
+
+    <span :class="['text-sm font-bold text-slate-700 transition-all', {'line-through text-slate-400 opacity-60': todo.done}]">
+        {{ todo.text }}
+    </span>
+</div>
                 </div>
 
                 <div v-if="parseImages(wish.image).length > 0" class="card-image-slider flex gap-2 overflow-x-auto no-scrollbar mb-3">
@@ -394,7 +399,7 @@
         </button>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script03.js"></script>
 	<script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -406,4 +411,3 @@
 </script>
 </body>
 </html>
-

@@ -364,8 +364,36 @@ const submitForm = async () => {
             lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
         };
 
-        // --- 7. 生命周期與全局監聽 ---
+// --- 7. 生命周期與全局監聽 ---
         onMounted(() => {
+            // ==========================================
+            // 【新增：PWA 動態 Manifest 邏輯】
+            // ==========================================
+            if (USER_KEY.value) {
+                const manifestElem = document.getElementById('manifest-link');
+                if (manifestElem) {
+                    const adminManifest = {
+                        "name": "拾光旅圖 (管理模式)",
+                        "short_name": "旅圖管理",
+                        "start_url": `index.html?key=${USER_KEY.value}`, // 自動帶入當前金鑰
+                        "display": "standalone",
+                        "background_color": "#f8fafc",
+                        "theme_color": "#6d9bc3",
+                        "icons": [
+                            {
+                                "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png",
+                                "sizes": "512x512",
+                                "type": "image/png",
+                                "purpose": "any maskable"
+                            }
+                        ]
+                    };
+                    const blob = new Blob([JSON.stringify(adminManifest)], { type: 'application/json' });
+                    manifestElem.setAttribute('href', URL.createObjectURL(blob));
+                }
+            }
+
+            // --- 原有的快取載入與事件監聽 ---
             const cachedData = localStorage.getItem('travel_pro_cache');
             if (cachedData) {
                 try {
@@ -377,6 +405,7 @@ const submitForm = async () => {
             }
             fetchData();
 
+            // 鍵盤與觸控監聽 (保持不變)
             window.addEventListener('keydown', (e) => {
                 if (lightboxUrl.value) {
                     if (e.key === 'ArrowLeft') prevPhoto();

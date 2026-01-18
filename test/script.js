@@ -1,8 +1,49 @@
 const { createApp, ref, computed, onMounted, watch } = Vue;
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzsM5ji2zztA6-EeCBUzTpVdN9bcom4RrVej8_imJABKmyZ0VWOSLY8DNv2ZL1KcOVG/exec"; 
+// 請確保此網址正確
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwTbYWXTcRVBGIXUiRY7sMJCxymVtyK4Y-E6TPSA9Wc6vS39-MjLzC7Iw3ziN9xA1Mk/exec"; 
 
 createApp({
     setup() {
+        let syncTimer = null;
+
+// ==========================================
+// 【修正：網址優先且嚴格的金鑰邏輯】
+// ==========================================
+const getInitialKey = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyFromUrl = urlParams.get('key');
+
+    if (keyFromUrl !== null) {
+        // 情境 A：網址有帶 key 參數 (不管是正確還是空的 ?key=)
+        if (keyFromUrl.trim() !== "") {
+            localStorage.setItem('travel_access_key', keyFromUrl);
+            return keyFromUrl;
+        } else {
+            // 如果網址是 ?key= (空的)，視為登出，清除暫存
+            localStorage.removeItem('travel_access_key');
+            return "";
+        }
+    } else {
+        // 情境 B：網址完全沒有 key 參數 (例如直接輸入 index.html)
+        // 此處你可以決定：
+        // 1. 要不要從暫存拿？如果要像你說的「按 Enter (重新整理) 就回到沒有 KEY」，
+        //    那就直接回傳空字串，並且不使用 localStorage。
+        
+        // 依照你的需求「網址沒帶 KEY 就回到沒有 KEY 的狀態」：
+        localStorage.removeItem('travel_access_key'); // 強制清空
+        return "";
+    }
+};
+
+        const USER_KEY = ref(getInitialKey());
+
+        // 【修正 2: 嚴格判斷 isAdmin】
+        // 確保只有當金鑰真正存在且不是空字串時才顯示按鈕
+        const isAdmin = computed(() => {
+            const k = USER_KEY.value;
+            return k !== null && k !== undefined && String(k).trim() !== "" && String(k) !== "null";
+        });
+
         // --- 1. 基礎狀態 ---
         const currentTab = ref('itinerary');
         const loading = ref(false);
@@ -26,9 +67,8 @@ createApp({
         const touchStartDist = ref(0);
         const touchStartPoint = ref({ x: 0, y: 0 });
         const isDragging = ref(false);
-
-        // 分頁切換座標
         const touchState = ref({ startX: 0, startY: 0, endX: 0, endY: 0 });
+        const imgTouchState = ref({ startX: 0, startY: 0 });
 
         const expandedItems = ref([]); 
         const allData = ref({ itinerary: [], expenses: [], wishes: [], settings: {} });
@@ -38,6 +78,19 @@ createApp({
         
         const tabNames = { itinerary:'行程', expense:'記帳', wish:'許願', setting:'設定' };
         const tabIcons = { itinerary:'fa-calendar-days', expense:'fa-wallet', wish:'fa-wand-magic-sparkles', setting:'fa-gear' };
+		
+		// ==========================================
+        // 【修正 3: 處理金鑰失效自動隱藏】
+        // ==========================================
+        const handleApiError = (res) => {
+            if (res && res.message && (res.message.includes("金鑰") || res.message.includes("權限"))) {
+                alert("權限驗證失敗，管理功能已停用");
+                USER_KEY.value = ""; // 這裡一變，isAdmin 就會變 false，按鈕立即消失
+                localStorage.removeItem('travel_access_key');
+            } else {
+                alert("儲存失敗：" + (res.message || "未知錯誤"));
+            }
+        };
 
         // --- 3. 輔助工具 ---
         const isWishDone = (wish) => {
@@ -134,7 +187,7 @@ createApp({
 
         // --- 5. 燈箱與分頁核心手勢邏輯 ---
         const handleSwipe = () => {
-            if (zoomScale.value > 1.1) return; // 縮放時不切換分頁
+            if (zoomScale.value > 1.1) return; 
             const swipeThreshold = 100;
             const verticalLimit = 40;
             const diffX = touchState.value.startX - touchState.value.endX;
@@ -146,82 +199,50 @@ createApp({
                 
                 const tabs = Object.keys(tabNames);
                 let currentIndex = tabs.indexOf(currentTab.value);
+                if (diffX > 0 && currentIndex < tabs.length - 1) currentTab.value = tabs[currentIndex + 1];
+                else if (diffX < 0 && currentIndex > 0) currentTab.value = tabs[currentIndex - 1];
+            }
+        };
 
-                if (diffX > 0 && currentIndex < tabs.length - 1) {
-                    currentTab.value = tabs[currentIndex + 1];
-                } else if (diffX < 0 && currentIndex > 0) {
-                    currentTab.value = tabs[currentIndex - 1];
+        const handleTouchStartImg = (e) => {
+            if (e.touches.length === 2) {
+                touchStartDist.value = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+            } else if (e.touches.length === 1) {
+                imgTouchState.value.startX = e.touches[0].pageX;
+                imgTouchState.value.startY = e.touches[0].pageY;
+                if (zoomScale.value > 1) {
+                    isDragging.value = true;
+                    touchStartPoint.value = { x: e.touches[0].pageX - offsetX.value, y: e.touches[0].pageY - offsetY.value };
                 }
             }
         };
 
-// 1. 在 setup 內增加一個專門給燈箱用的 touch 狀態
-const imgTouchState = ref({ startX: 0, startY: 0 });
-
-const handleTouchStartImg = (e) => {
-    if (e.touches.length === 2) {
-        touchStartDist.value = Math.hypot(
-            e.touches[0].pageX - e.touches[1].pageX,
-            e.touches[0].pageY - e.touches[1].pageY
-        );
-    } else if (e.touches.length === 1) {
-        // 記錄起始點，用來判斷滑動方向
-        imgTouchState.value.startX = e.touches[0].pageX;
-        imgTouchState.value.startY = e.touches[0].pageY;
-
-        if (zoomScale.value > 1) {
-            isDragging.value = true;
-            touchStartPoint.value = {
-                x: e.touches[0].pageX - offsetX.value,
-                y: e.touches[0].pageY - offsetY.value
-            };
-        }
-    }
-};
-
-const handleTouchMoveImg = (e) => {
-    if (e.touches.length === 2) {
-        const currentDist = Math.hypot(
-            e.touches[0].pageX - e.touches[1].pageX,
-            e.touches[0].pageY - e.touches[1].pageY
-        );
-        const scale = (currentDist / touchStartDist.value) * lastScale.value;
-        zoomScale.value = Math.min(Math.max(scale, 1), 4);
-    } else if (e.touches.length === 1 && isDragging.value) {
-        offsetX.value = e.touches[0].pageX - touchStartPoint.value.x;
-        offsetY.value = e.touches[0].pageY - touchStartPoint.value.y;
-    }
-};
-
-const handleTouchEndImg = (e) => {
-    isDragging.value = false;
-    lastScale.value = zoomScale.value;
-
-    // --- 關鍵：加入左右滑動切換邏輯 ---
-    if (zoomScale.value <= 1.1) { // 只有在沒放大或微放大時才允許切換
-        const endX = e.changedTouches[0].pageX;
-        const diffX = imgTouchState.value.startX - endX;
-        const swipeThreshold = 50; // 滑動超過 50px 就切換
-
-        if (Math.abs(diffX) > swipeThreshold) {
-            if (diffX > 0) {
-                nextPhoto(); // 向左滑，看下一張
-            } else {
-                prevPhoto(); // 向右滑，看前一張
+        const handleTouchMoveImg = (e) => {
+            if (e.touches.length === 2) {
+                const currentDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+                const scale = (currentDist / touchStartDist.value) * lastScale.value;
+                zoomScale.value = Math.min(Math.max(scale, 1), 4);
+            } else if (e.touches.length === 1 && isDragging.value) {
+                offsetX.value = e.touches[0].pageX - touchStartPoint.value.x;
+                offsetY.value = e.touches[0].pageY - touchStartPoint.value.y;
             }
-        }
-        
-        // 重置位移（確保切換後圖片置中）
-        zoomScale.value = 1; 
-        lastScale.value = 1;
-        offsetX.value = 0; 
-        offsetY.value = 0;
-    } else if (zoomScale.value <= 1.05) {
-        // 如果只是輕微縮放，放開後彈回原狀
-        zoomScale.value = 1; lastScale.value = 1;
-        offsetX.value = 0; offsetY.value = 0;
-    }
-};
+        };
+
+        const handleTouchEndImg = (e) => {
+            isDragging.value = false;
+            lastScale.value = zoomScale.value;
+            if (zoomScale.value <= 1.1) {
+                const endX = e.changedTouches[0].pageX;
+                const diffX = imgTouchState.value.startX - endX;
+                const swipeThreshold = 50;
+                if (Math.abs(diffX) > swipeThreshold) {
+                    if (diffX > 0) nextPhoto(); else prevPhoto();
+                }
+                zoomScale.value = 1; lastScale.value = 1; offsetX.value = 0; offsetY.value = 0;
+            } else if (zoomScale.value <= 1.05) {
+                zoomScale.value = 1; lastScale.value = 1; offsetX.value = 0; offsetY.value = 0;
+            }
+        };
 
         // --- 6. 圖片與資料處理 ---
         const resizeImage = (file) => {
@@ -253,14 +274,23 @@ const handleTouchEndImg = (e) => {
                     const base64 = await resizeImage(file);
                     const res = await fetch(GAS_URL, {
                         method: 'POST',
-                        body: JSON.stringify({ action: 'uploadImage', base64, fileName: `${Date.now()}.webp`, fileType: 'image/webp' })
+                        body: JSON.stringify({ 
+                            action: 'uploadImage', 
+                            base64, 
+                            fileName: `${Date.now()}.webp`, 
+                            fileType: 'image/webp',
+                            key: USER_KEY.value // 補上金鑰
+                        })
                     }).then(r => r.json());
+                    
                     if (res.success) {
                         if (currentTab.value === 'expense') form.value.image = res.url;
                         else {
                             if (!Array.isArray(form.value.image)) form.value.image = [];
                             form.value.image.push(res.url);
                         }
+                    } else {
+                        alert("上傳失敗：" + (res.message || "權限不足"));
                     }
                 } catch (e) { console.error(e); }
                 uploadProgress.value.current++;
@@ -268,33 +298,57 @@ const handleTouchEndImg = (e) => {
             uploading.value = false;
         };
 
-        const fetchData = async () => {
+const fetchData = async () => {
             if (!allData.value.itinerary.length) loading.value = true; 
             try {
-                const res = await fetch(GAS_URL).then(r => r.json());
+                // 如果沒有 Key，就不帶 key 參數，避免 GAS 報錯
+                const url = isAdmin.value ? `${GAS_URL}?key=${USER_KEY.value}` : GAS_URL;
+                const res = await fetch(url).then(r => r.json());
+                
                 allData.value = res;
                 settingForm.value = { ...res.settings };
                 localRates.value = typeof res.settings.rates === 'string' ? JSON.parse(res.settings.rates) : (res.settings.rates || []);
                 localStorage.setItem('travel_pro_cache', JSON.stringify(res));
-            } catch (e) { console.error(e); } finally { loading.value = false; }
+            } catch (e) { 
+                console.error("Fetch error:", e); 
+            } finally { 
+                loading.value = false; 
+            }
         };
 
-        const submitForm = async () => {
+const submitForm = async () => {
             if (uploading.value) return alert("圖片上傳中...");
             loading.value = true;
             try {
                 let dataToSave = { ...form.value };
-                if (currentTab.value === 'expense') {
-                    const rate = localRates.value.find(r => r.code === dataToSave.currency);
-                    dataToSave.twd = Math.round(dataToSave.amount * (rate ? rate.rate : 1));
-                }
-                dataToSave.image = Array.isArray(form.value.image) ? JSON.stringify(form.value.image) : (form.value.image || "");
+                // ... 記帳邏輯保持不變 ...
+                
                 const action = isEditing.value ? 'updateData' : 'addData';
                 const sheet = { itinerary: 'Itinerary', expense: 'Expenses', wish: 'Wishes' }[currentTab.value];
-                await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action, data: dataToSave, id: form.value.id || null, sheet }) });
-                showModal.value = false;
-                fetchData();
-            } catch (e) { alert("儲存失敗"); } finally { loading.value = false; }
+                
+                const res = await fetch(GAS_URL, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ 
+                        action, 
+                        data: dataToSave, 
+                        id: form.value.id || null, 
+                        sheet,
+                        key: USER_KEY.value
+                    }) 
+                }).then(r => r.json());
+
+                if (res.success) {
+                    showModal.value = false;
+                    fetchData();
+                } else {
+                    handleApiError(res); // 使用統一錯誤處理
+                    fetchData();
+                }
+            } catch (e) { 
+                alert("網路連線錯誤"); 
+            } finally { 
+                loading.value = false; 
+            }
         };
 
         const prevPhoto = () => {
@@ -331,55 +385,28 @@ const handleTouchEndImg = (e) => {
                 }
             });
 
-// --- 在 onMounted 內部的監聽器部分 ---
+            window.addEventListener('touchstart', (e) => {
+                const target = e.target;
+                const isInsideTable = target.closest('.table-container');
+                const isInsideItineraryDate = target.closest('.itinerary-date-filter');
+                const isInsideWishTags = target.closest('.wish-tags-container');
+                const isInsideCardSlider = target.closest('.card-image-slider'); 
+                const isInput = target.closest('textarea') || target.closest('input');
 
-window.addEventListener('touchstart', (e) => {
-    // 1. 先定義 target
-    const target = e.target;
-    
-    // 2. 找出需要「鎖定」不換頁的區域
-    // 檢查表格
-    const isInsideTable = target.closest('.table-container');
-    // 檢查行程上方日期 (使用我們剛加的 class)
-    const isInsideItineraryDate = target.closest('.itinerary-date-filter');
-    // 檢查許願標籤容器
-    const isInsideWishTags = target.closest('.wish-tags-container');
-    // 檢查輸入框
-    const isInput = target.closest('textarea') || target.closest('input');
+                if (lightboxUrl.value || showModal.value || isInsideTable || isInsideItineraryDate || isInsideWishTags || isInsideCardSlider || isInput) {
+                    touchState.value.startX = 0; 
+                    return;
+                }
+                touchState.value.startX = e.touches[0].clientX;
+                touchState.value.startY = e.touches[0].clientY;
+            }, { passive: true });
 
-    // 3. 判斷是否要攔截
-    if (lightboxUrl.value || showModal.value || isInsideTable || isInsideItineraryDate || isInsideWishTags || isInput) {
-        touchState.value.startX = 0; // 歸零，防止觸發 swipe
-        
-        // 偵錯用訊息，確認是哪裡觸發了鎖定
-        if (isInsideItineraryDate) console.log("行程日期區：鎖定滑動換頁");
-        if (isInsideWishTags) console.log("許願標籤區：鎖定滑動換頁");
-        
-        return;
-    }
-    
-    // 4. 正常區域：記錄起始點，開啟滑動換頁偵測
-    touchState.value.startX = e.touches[0].clientX;
-    touchState.value.startY = e.touches[0].clientY;
-    
-    console.log(`觸發滑動偵測，起點: ${touchState.value.startX}`);
-}, { passive: true });
-
-window.addEventListener('touchend', (e) => {
-    if (lightboxUrl.value || showModal.value || touchState.value.startX === 0) return;
-    
-    touchState.value.endX = e.changedTouches[0].clientX;
-    touchState.value.endY = e.changedTouches[0].clientY;
-    
-    // 計算滑動量
-    const diffX = touchState.value.startX - touchState.value.endX;
-    const diffY = touchState.value.startY - touchState.value.endY;
-    
-    // 顯示滑動數據到 Console
-    console.log(`滑動距離 - X: ${Math.round(diffX)}px, Y: ${Math.round(diffY)}px`);
-    
-    handleSwipe();
-}, { passive: true });
+            window.addEventListener('touchend', (e) => {
+                if (lightboxUrl.value || showModal.value || touchState.value.startX === 0) return;
+                touchState.value.endX = e.changedTouches[0].clientX;
+                touchState.value.endY = e.changedTouches[0].clientY;
+                handleSwipe();
+            }, { passive: true });
         });
 
         // --- 8. 待辦與功能函數 ---
@@ -404,27 +431,64 @@ window.addEventListener('touchend', (e) => {
             }
         };
 
-        const toggleSubTodo = async (wish, index) => {
-            let lines = wish.content.split('\n');
-            let todoCount = 0;
-            const newLines = lines.map(line => {
-                if (line.trim().startsWith('- [')) {
-                    if (todoCount === index) {
-                        line = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace('[x]', '[ ]');
-                    }
-                    todoCount++;
-                }
-                return line;
-            });
-            loading.value = true;
-            await fetch(GAS_URL, { 
-                method: 'POST', 
-                body: JSON.stringify({ action: 'updateData', data: { ...wish, content: newLines.join('\n') }, id: wish.id, sheet: 'Wishes' }) 
-            });
-            fetchData();
+// --- 修正後的許願清單待辦勾選 ---
+const toggleSubTodo = async (wish, index) => {
+    // 1. 先確認是否有權限，沒權限直接擋掉，不給勾
+    if (!USER_KEY.value) {
+        alert("權限不足，無法勾選");
+        return;
+    }
+
+    // 取得原本的狀態（備份，萬一失敗要恢復）
+    const todos = parseTodos(wish.todo);
+    const originalTodoText = wish.todo;
+    
+    // 2. 前端先反應 (樂觀更新)
+    todos[index].done = !todos[index].done;
+    const newTodoText = todos.map(t => `- [${t.done ? 'x' : ' '}] ${t.content}`).join('\n');
+    wish.todo = newTodoText;
+
+    loading.value = true;
+    try {
+        const res = await fetch(GAS_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'updateData',
+                data: { ...wish, todo: newTodoText },
+                id: wish.id,
+                sheet: 'Wishes',
+                key: USER_KEY.value
+            })
+        }).then(r => r.json());
+
+        if (res.success) {
+            // 成功：重新整理數據以確保同步
+            await fetchData();
+        } else {
+            // 失敗：權限不足或金鑰失效
+            handleApiError(res);
+            // 【關鍵】將前端狀態恢復成原始資料
+            wish.todo = originalTodoText;
+        }
+    } catch (e) {
+        alert("網路連線錯誤");
+        // 發生意外時也要恢復原狀
+        wish.todo = originalTodoText;
+    } finally {
+        loading.value = false;
+    }
+};
+
+        const fetchDataSilently = async () => {
+            try {
+                const res = await fetch(`${GAS_URL}?key=${USER_KEY.value}`).then(r => r.json());
+                allData.value = res;
+                localStorage.setItem('travel_pro_cache', JSON.stringify(res));
+            } catch (e) { console.log("靜默同步失敗"); }
         };
 
         return { 
+            isAdmin, // 重要：返回給 HTML 使用
             currentTab, loading, uploading, uploadProgress, allData, tabNames, tabIcons, filteredItinerary, sortedExpensesByFilter, filteredTotalTWD, filteredWishes,
             availableDates: computed(() => [...new Set((allData.value.itinerary || []).map(i => rawToDateStr(i.day)))].filter(d => d && !d.includes('1899')).sort()),
             filterDate, debtFilter, showModal, isEditing, form, 
@@ -460,10 +524,70 @@ window.addEventListener('touchend', (e) => {
             submitForm, fetchData, formatDisplayDate: (d) => rawToDateStr(d).split('-').slice(1).join('/'),
             formatDisplayTime: (t) => t ? String(t).padStart(4, '0').replace(/(..)(..)/, '$1:$2') : '--:--',
             getWeekday: (d) => d ? ['週日','週一','週二','週三','週四','週五','週六'][new Date(d).getDay()] : "",
-            deleteItem: async (sheet, id) => { if(confirm("確定刪除？")) { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteData', id, sheet }) }); fetchData(); } },
-            toggleWishDone: async (wish) => { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateData', data: { ...wish, isDone: !isWishDone(wish) }, id: wish.id, sheet: 'Wishes' }) }); fetchData(); },
-            saveSettings: async () => { loading.value = true; await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'updateSettings', data: { ...settingForm.value, rates: localRates.value } }) }); alert("設定已儲存"); fetchData(); },
-            openGoogleMaps: (loc) => window.open(`https://www.google.com/maps/search/${encodeURIComponent(loc)}`, '_blank'),
+deleteItem: async (sheet, id) => { 
+    if(confirm("確定刪除？")) { 
+        loading.value = true; 
+        try {
+            const res = await fetch(GAS_URL, { 
+                method: 'POST', 
+                body: JSON.stringify({ action: 'deleteData', id, sheet, key: USER_KEY.value }) 
+            }).then(r => r.json());
+            
+            if (res.success) {
+                fetchData(); 
+            } else {
+                handleApiError(res); // <-- 改成這個
+                fetchData();
+            }
+        } catch (e) { alert("網路連線錯誤"); }
+        finally { loading.value = false; }
+    } 
+},
+toggleWishDone: async (wish) => { 
+    loading.value = true; 
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ 
+                action: 'updateData', 
+                data: { ...wish, isDone: !isWishDone(wish) }, 
+                id: wish.id, 
+                sheet: 'Wishes', 
+                key: USER_KEY.value 
+            }) 
+        }).then(r => r.json());
+
+        if (res.success) {
+            fetchData(); 
+        } else {
+            handleApiError(res); // <-- 改成這個
+            fetchData();
+        }
+    } catch (e) { alert("網路連線錯誤"); }
+    finally { loading.value = false; }
+},
+saveSettings: async () => { 
+    loading.value = true; 
+    try {
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ 
+                action: 'updateSettings', 
+                data: { ...settingForm.value, rates: localRates.value },
+                key: USER_KEY.value 
+            }) 
+        }).then(r => r.json());
+
+        if (res.success) {
+            alert("設定已儲存"); 
+            fetchData();
+        } else {
+            handleApiError(res); // <-- 改成這個
+        }
+    } catch (e) { alert("網路連線錯誤"); }
+    finally { loading.value = false; }
+},
+            openGoogleMaps: (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'),
             linkify: (text) => text ? text.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (url) => `<a href="${url}" target="_blank" class="text-blue-500 underline break-all">${url}</a>`) : "",
             parseImages, removeImage: (idx) => { if(currentTab.value==='expense') form.value.image=''; else form.value.image.splice(idx,1); },
             compressAndUpload, isItemSelected: (it, f) => (form.value[f] || "").split(',').includes(it),

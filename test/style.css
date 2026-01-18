@@ -368,3 +368,25 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
 .flex-nowrap.pb-3 {
     padding-bottom: 12px !important; /* 這行是關鍵：把滑桿往下推 */
 }
+
+/* 在 style.css 加入 */
+.tab-content-enter-active, .tab-content-leave-active {
+  transition: opacity 0.2s ease;
+}
+.tab-content-enter-from, .tab-content-leave-to {
+  opacity: 0;
+}
+
+/* 1. 修正：圖示強制字體，防止被粉圓體蓋掉 */
+.fa-solid, .fa-regular, .fa-brands {
+    font-family: "Font Awesome 6 Free" !important;
+    font-style: normal !important;
+    display: inline-block !important;
+}
+
+/* 2. 修正：加深圖示顏色，確保可見度 */
+.fa-pen, .fa-trash, .fa-pen-to-square {
+    color: #64748b !important; /* 比 text-muted 深一點的藍灰色 */
+    opacity: 1 !important;
+    visibility: visible !important;
+}

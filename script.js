@@ -3,6 +3,7 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbzsM5ji2zztA6-EeCBUzTpV
 
 createApp({
     setup() {
+		let syncTimer = null;
         // --- 1. 基礎狀態 ---
         const currentTab = ref('itinerary');
         const loading = ref(false);
@@ -402,25 +403,62 @@ window.addEventListener('touchend', (e) => {
             }
         };
 
-        const toggleSubTodo = async (wish, index) => {
-            let lines = wish.content.split('\n');
-            let todoCount = 0;
-            const newLines = lines.map(line => {
-                if (line.trim().startsWith('- [')) {
-                    if (todoCount === index) {
-                        line = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace('[x]', '[ ]');
-                    }
-                    todoCount++;
-                }
-                return line;
-            });
-            loading.value = true;
+// 在 script02.js 中尋找並替換 toggleSubTodo 函數
+const toggleSubTodo = async (wish, index) => {
+    // 1. 取得原始狀態以備失敗時回滾
+    const originalContent = wish.content;
+
+    // 2. 執行本地「樂觀更新」 (立即反應在畫面上)
+    let lines = wish.content.split('\n');
+    let todoCount = 0;
+    const newLines = lines.map(line => {
+        if (line.trim().startsWith('- [')) {
+            if (todoCount === index) {
+                line = line.includes('[ ]') ? line.replace('[ ]', '[x]') : line.replace('[x]', '[ ]');
+            }
+            todoCount++;
+        }
+        return line;
+    });
+    wish.content = newLines.join('\n');
+
+    // 3. 防抖處理：避免短時間內連續點擊多個勾選框產生過多請求
+    clearTimeout(syncTimer); 
+    syncTimer = setTimeout(async () => {
+        try {
+            // mode: 'no-cors' 適合不需處理回傳值的背景更新，速度最快
             await fetch(GAS_URL, { 
                 method: 'POST', 
-                body: JSON.stringify({ action: 'updateData', data: { ...wish, content: newLines.join('\n') }, id: wish.id, sheet: 'Wishes' }) 
+                mode: 'no-cors',
+                body: JSON.stringify({ 
+                    action: 'updateData', 
+                    data: { ...wish }, 
+                    id: wish.id, 
+                    sheet: 'Wishes' 
+                }) 
             });
-            fetchData();
-        };
+            
+            // 執行靜默同步，確保本地與雲端資料最終一致
+            fetchDataSilently();
+            
+        } catch (e) {
+            console.error("同步失敗，回滾狀態");
+            wish.content = originalContent; // 失敗時回滾
+            alert("網路連線不穩定，狀態同步失敗");
+        }
+    }, 1000); // 停止操作 1 秒後才送出最終狀態
+};
+
+// 建議新增一個靜默同步函數，避免畫面閃爍
+const fetchDataSilently = async () => {
+    try {
+        const res = await fetch(GAS_URL).then(r => r.json());
+        allData.value = res;
+        localStorage.setItem('travel_pro_cache', JSON.stringify(res));
+    } catch (e) {
+        console.log("靜默同步失敗");
+    }
+};
 
         return { 
             currentTab, loading, uploading, uploadProgress, allData, tabNames, tabIcons, filteredItinerary, sortedExpensesByFilter, filteredTotalTWD, filteredWishes,

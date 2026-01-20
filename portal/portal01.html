@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拾光旅圖 | 旅程生成平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @font-face {
+            font-family: 'jf-openhuninn';
+            src: url('https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf') format('truetype');
+        }
+
+        :root {
+            --primary: #6d9bc3;
+            --primary-dark: #5a82a5;
+            --text-main: #334155;
+            --accent-soft: rgba(109, 155, 195, 0.15);
+        }
+
+        body { 
+            font-family: 'jf-openhuninn', sans-serif; 
+            background-color: #fdfdfd;
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        .app-bg-decoration {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background-color: #fdfdfd;
+        }
+
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.35;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(109, 155, 195, 0.25);
+            border-radius: 2rem;
+            box-shadow: 0 15px 35px rgba(109, 155, 195, 0.08);
+        }
+
+        .app-label {
+            font-size: 14px;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        .app-input {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            transition: all 0.3s ease;
+        }
+
+        .app-input:focus {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--accent-soft);
+            outline: none;
+        }
+
+        .btn-summer {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 6px 20px rgba(109, 155, 195, 0.25);
+            transition: all 0.3s;
+        }
+
+        .btn-summer:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
+        .btn-summer:active { transform: scale(0.97); }
+
+        @keyframes logo-float-rotate {
+            0% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-12px) rotate(12deg); }
+            100% { transform: translateY(0) rotate(0deg); }
+        }
+        .logo-anim {
+            animation: logo-float-rotate 5s ease-in-out infinite;
+        }
+
+        .success-box {
+            background: white;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 1.25rem;
+            overflow: hidden;
+        }
+
+        .link-item {
+            display: flex;
+            align-items: center;
+            padding: 1.2rem;
+            transition: all 0.2s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .link-item:last-child { border-bottom: none; }
+        .link-item:hover { background-color: #f8fafc; }
+    </style>
+</head>
+<body class="flex items-center justify-center py-12 px-4">
+
+    <div class="app-bg-decoration">
+        <div class="bg-circle" style="width: 500px; height: 500px; background: #6d9bc3; top: -150px; left: -100px;"></div>
+        <div class="bg-circle" style="width: 400px; height: 400px; background: #f2cc8f; bottom: -50px; right: -50px; opacity: 0.15;"></div>
+    </div>
+
+    <div class="max-w-4xl w-full">
+        <div class="text-center mb-10">
+            <div class="inline-block mb-6 relative">
+                <img src="https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png" 
+                     alt="Logo" class="w-20 h-20 logo-anim drop-shadow-xl">
+            </div>
+            <h1 class="text-3xl font-black tracking-tight" style="color: var(--primary-dark)">拾光旅圖</h1>
+            <p class="text-slate-400 text-sm tracking-[0.2em] font-bold mt-1 uppercase">Travel App Maker</p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8 items-stretch">
+            <div class="glass-card p-8 md:p-10 flex flex-col">
+                <h2 class="text-2xl font-black mb-8 flex items-center text-slate-800">
+                    <i class="fa-solid fa-square-plus mr-3 text-[#6d9bc3]"></i>
+                    建立新行程
+                </h2>
+
+                <form id="regForm" class="space-y-4 flex-grow">
+                    <div>
+                        <label class="app-label">行程識別碼 (ID)</label>
+                        <input type="text" id="trip_id" class="app-input w-full p-4 rounded-2xl font-bold" placeholder="例如: tokyo-trip" required>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="app-label">您的暱稱</label>
+                            <input type="text" id="nickname" class="app-input w-full p-4 rounded-2xl" placeholder="Jerry" required>
+                        </div>
+                        <div>
+                            <label class="app-label">四位金鑰</label>
+                            <input type="password" id="secret_key" class="app-input w-full p-4 rounded-2xl" placeholder="0000" maxlength="4" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="app-label">GAS 部署網址</label>
+                        <input type="url" id="gas_url" class="app-input w-full p-4 rounded-2xl text-sm" placeholder="https://script.google.com/..." required>
+                    </div>
+
+                    <div class="pb-4">
+                        <label class="app-label">App 預設主題</label>
+                        <div class="relative">
+                            <select id="theme_id" class="app-input w-full p-4 rounded-2xl appearance-none cursor-pointer bg-white font-bold text-slate-600">
+                                <option value="spring">🌸 春季櫻花</option>
+                                <option value="summer" selected>🌊 夏季海洋</option>
+                                <option value="autumn">🍂 秋季楓紅</option>
+                                <option value="winter">❄️ 冬季雪境</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-5 top-5 text-slate-300 pointer-events-none"></i>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-summer w-full font-black py-5 rounded-3xl text-lg flex items-center justify-center gap-3">
+                        <span>生成我的旅圖</span>
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    </button>
+                </form>
+                <div id="regMsg" class="mt-4"></div>
+            </div>
+
+            <div class="flex flex-col gap-8">
+                <div class="glass-card p-8">
+                    <h3 class="text-2xl font-black mb-8 flex items-center text-slate-800">
+                        <i class="fa-solid fa-database mr-3 text-slate-400"></i>
+                        行程庫管理
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="app-label">暱稱</label>
+                            <input type="text" id="q_nickname" class="app-input w-full p-4 rounded-2xl text-sm" placeholder="輸入當初註冊的暱稱">
+                        </div>
+                        <div>
+                            <label class="app-label">金鑰</label>
+                            <input type="password" id="q_key" class="app-input w-full p-4 rounded-2xl text-sm" placeholder="輸入 4 位金鑰">
+                        </div>
+                        <button onclick="queryMyTrips()" class="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <span>即刻查詢</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="queryResultsContainer" class="hidden glass-card p-6 flex-grow border-t-4" style="border-top-color: var(--primary)">
+                    <div id="queryResults" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CATALOG_GAS_URL = "https://script.google.com/macros/s/AKfycbxA8phevTocRDd0WlcguLa4JIwgYbJnILJF97ZTCAgDeUhC2FUtJ2KWzpRaZnDA0efSMA/exec";
+
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const msgDiv = document.getElementById('regMsg');
+            const key = document.getElementById('secret_key').value;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在通訊中...';
+
+            const payload = {
+                trip_id: document.getElementById('trip_id').value,
+                nickname: document.getElementById('nickname').value,
+                secret_key: key,
+                gas_url: document.getElementById('gas_url').value,
+                theme_id: document.getElementById('theme_id').value,
+                display_name: document.getElementById('trip_id').value
+            };
+
+            try {
+                const response = await fetch(CATALOG_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
+                const result = await response.json();
+                if (result.success) {
+                    msgDiv.innerHTML = `
+                        <div class="mt-4">
+                            <p class="text-slate-800 font-black text-lg mb-4 flex items-center">
+                                <i class="fa-solid fa-circle-check text-green-500 mr-2"></i> 行程建立完畢！
+                            </p>
+                            <div class="success-box shadow-lg">
+                                <a href="index.html?trip=${payload.trip_id}" target="_blank" class="link-item">
+                                    <div class="w-12 h-12 bg-blue-50 text-[#6d9bc3] rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                                        <i class="fa-solid fa-paper-plane text-lg"></i>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <div class="text-[15px] font-black text-slate-700">訪客版</div>
+                                        <div class="text-xs text-slate-400 font-bold">分享給旅伴查看</div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                                </a>
+                                <a href="index.html?trip=${payload.trip_id}&key=${key}" target="_blank" class="link-item bg-slate-50">
+                                    <div class="w-12 h-12 bg-[#5a82a5] text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                                        <i class="fa-solid fa-lock text-lg"></i>
+                                    </div>
+                                    <div class="flex-grow">
+                                        <div class="text-[15px] font-black text-slate-700">管理版</div>
+                                        <div class="text-xs text-[#5a82a5] font-bold">管理行程與權限</div>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-right text-slate-400"></i>
+                                </a>
+                            </div>
+                        </div>`;
+                } else {
+                    msgDiv.innerHTML = `<div class="p-4 bg-red-50 text-red-500 rounded-2xl text-sm font-bold">${result.message}</div>`;
+                }
+            } catch (err) {
+                msgDiv.innerHTML = `<div class="p-4 bg-red-50 text-red-500 rounded-2xl text-sm font-bold text-center">系統連線失敗</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>生成我的旅圖</span> <i class="fa-solid fa-wand-magic-sparkles"></i>';
+            }
+        });
+
+        async function queryMyTrips() {
+            const user = document.getElementById('q_nickname').value;
+            const key = document.getElementById('q_key').value;
+            const resDiv = document.getElementById('queryResults');
+            const container = document.getElementById('queryResultsContainer');
+            if (!user || !key) return;
+            container.classList.remove('hidden');
+            resDiv.innerHTML = '<div class="text-center p-6"><i class="fa-solid fa-circle-notch fa-spin text-blue-200 text-2xl"></i></div>';
+            try {
+                const res = await fetch(`${CATALOG_GAS_URL}?action=listMyTrips&user=${user}&key=${key}`);
+                const data = await res.json();
+                if (data.success && data.trips.length > 0) {
+                    let html = `<div class="text-sm font-black text-slate-400 mb-4 tracking-widest text-center uppercase">您的專屬行程庫</div>`;
+                    data.trips.forEach(item => {
+                        html += `
+                            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                                <div class="font-black text-slate-700 text-lg mb-3 truncate flex items-center">
+                                    <i class="fa-solid fa-map-location-dot mr-2 text-slate-300 text-sm"></i>
+                                    ${item.display_name}
+                                </div>
+                                <div class="flex gap-3">
+                                    <a href="index.html?trip=${item.trip_id}" target="_blank" class="flex-grow py-3 text-xs font-black bg-slate-50 text-slate-500 rounded-xl text-center hover:bg-blue-50 hover:text-[#6d9bc3] transition-all border border-slate-50 flex items-center justify-center gap-2">
+                                        <i class="fa-solid fa-paper-plane"></i> 訪客版
+                                    </a>
+                                    <a href="index.html?trip=${item.trip_id}&key=${key}" target="_blank" class="flex-grow py-3 text-xs font-black bg-[#5a82a5] text-white rounded-xl text-center hover:bg-[#4a6d8a] transition-all flex items-center justify-center gap-2 shadow-sm">
+                                        <i class="fa-solid fa-lock"></i> 管理版
+                                    </a>
+                                </div>
+                            </div>`;
+                    });
+                    resDiv.innerHTML = html;
+                } else {
+                    resDiv.innerHTML = `<div class="text-center p-8 text-slate-400 font-bold italic">查無行程紀錄</div>`;
+                }
+            } catch (err) { resDiv.innerHTML = `<div class="text-red-400 p-4 text-center">連線異常</div>`; }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+/* --- 1. 載入粉圓體 --- */
+@font-face {
+    font-family: 'jf-openhuninn';
+    src: url('https://ymdd-image-tw.s3.ap-east-2.amazonaws.com/font/jf-openhuninn-2.1.ttf') format('truetype');
+    font-display: swap;
+}
+
+/* --- 2. 核心變數設定 --- */
+:root {
+    --radius-lg: 1.25rem;
+    --radius-xl: 2.2rem;
+    --text-muted: #94a3b8;
+    --expense-card-text: #ffffff;
+    --expense-box-bg: rgba(255, 255, 255, 0.12);
+    --expense-box-border: rgba(255, 255, 255, 0.2);
+    --expense-filter-bg: rgba(255, 255, 255, 0.15);
+    --expense-filter-focus: rgba(255, 255, 255, 0.25);
+}
+
+/* 🌸 春季 - 柔和粉嫩色系 */
+:root, [data-theme="spring"] {
+    --primary-color: #e7a8a8; --primary-dark: #d68e8e; --primary-light: #fff5f5;
+    --bg-light: #fffafb; --text-main: #5a4a4a; --bg-svg-color: %23e7a8a8;
+    --expense-card-gradient: linear-gradient(135deg, #e7a8a8, #b5838d);
+    --season-icon-top: "🌸"; --season-icon-bottom: "🦋";
+    --wish-bg: #fff5f5; --wish-border: rgba(231, 168, 168, 0.4); --wish-tag-bg: #fce4e4;
+    --search-bg: #fce4e4; --search-focus-ring: rgba(231, 168, 168, 0.3);
+    /* 春季色池 */
+    --accent-1: #a3b18a; --accent-2: #e9c46a; --accent-3: #f4dada;
+    --accent-4: #d9a05b; --accent-5: #94b8b4; --accent-6: #c8b6ff;
+}
+
+/* 🌊 夏季 - 清爽明亮色系 */
+[data-theme="summer"] {
+    --primary-color: #6d9bc3; --primary-dark: #5a82a5; --primary-light: #f1f5f9;
+    --bg-light: #fdfdfd; --text-main: #334155; --bg-svg-color: %236d9bc3;
+    --expense-card-gradient: linear-gradient(135deg, #6d9bc3, #475569);
+    --season-icon-top: "✈️"; --season-icon-bottom: "☁️";
+    --wish-bg: #f1f5f9; --wish-border: rgba(109, 155, 195, 0.4); --wish-tag-bg: #e2e8f0;
+    --search-bg: #f1f5f9; --search-focus-ring: rgba(109, 155, 195, 0.3);
+    /* 夏季色池 */
+    --accent-1: #82a198; --accent-2: #f2cc8f; --accent-3: #e7a8a8;
+    --accent-4: #e07a5f; --accent-5: #3d5a80; --accent-6: #98c1d9;
+}
+
+/* 🍂 秋季 - 暖感大地色系 */
+[data-theme="autumn"] {
+    --primary-color: #d9a05b; --primary-dark: #bc864a; --primary-light: #fef9f2;
+    --bg-light: #fcf8f4; --text-main: #432818; --bg-svg-color: %23d9a05b;
+    --expense-card-gradient: linear-gradient(135deg, #d9a05b, #8b5e34);
+    --season-icon-top: "🍁"; --season-icon-bottom: "🍄";
+    --wish-bg: #fdf5e6; --wish-border: rgba(217, 160, 91, 0.4); --wish-tag-bg: #f3e5d0;
+    --search-bg: #f3e5d0; --search-focus-ring: rgba(217, 160, 91, 0.3);
+    /* 秋季色池 */
+    --accent-1: #6b705c; --accent-2: #ddbea9; --accent-3: #cb997e;
+    --accent-4: #a47148; --accent-5: #667761; --accent-6: #91614a;
+}
+
+/* ❄️ 冬季 - 冷靜莫蘭迪色系 */
+[data-theme="winter"] {
+    --primary-color: #8da9c4; --primary-dark: #6a85a0; --primary-light: #f0f4f8;
+    --bg-light: #f8fafc; --text-main: #1e293b; --bg-svg-color: %238da9c4;
+    --expense-card-gradient: linear-gradient(135deg, #8da9c4, #2c3e50);
+    --season-icon-top: "❄️"; --season-icon-bottom: "🏠";
+    --wish-bg: #f8fafc; --wish-border: rgba(141, 169, 196, 0.4); --wish-tag-bg: #e2e8f0;
+    --search-bg: #e2e8f0; --search-focus-ring: rgba(141, 169, 196, 0.3);
+    /* 冬季色池 */
+    --accent-1: #465a65; --accent-2: #9cc5a1; --accent-3: #b5c2cc;
+    --accent-4: #546a7b; --accent-5: #3e4c59; --accent-6: #7d8ea3;
+}
+
+/* --- 3. 全域修正 --- */
+*:not(i):not(.fa):not(.fa-solid):not(.fa-regular):not(.fa-brands) {
+    font-family: 'jf-openhuninn', 'PingFang TC', sans-serif !important;
+    font-style: normal !important;
+}
+
+body {
+    background-color: var(--bg-light) !important;
+    font-size: 16px !important;
+    overflow-x: hidden;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 32c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM23 70c4.418 0 8-3.582 8-8s-3.582-8-8-8-8 3.582-8 8 3.582 8 8 8zm43-2c6.627 0 12-5.373 12-12s-5.373-12-12-12-12 5.373-12 12 5.373 12 12 12zm0-50c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM10 43c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm40 58c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm59-10c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM83 91c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zM26 13c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zM9 5c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm33 31c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm24 18c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm19-8c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm-42 9c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm53-12c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM21 93c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zm-7-54c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1zm0-3c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1z' fill='var(--bg-svg-color)' fill-opacity='0.03' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+/* 季節裝飾圖示 */
+body::before {
+    content: var(--season-icon-top); 
+    position: fixed;
+    top: 15%;
+    right: 5%;
+    font-size: 80px;
+    opacity: 0.08;
+    z-index: -1;
+    transform: rotate(-15deg);
+}
+body::after {
+    content: var(--season-icon-bottom); 
+    position: fixed;
+    bottom: 25%;
+    left: 8%;
+    font-size: 60px;
+    opacity: 0.08;
+    z-index: -1;
+}
+
+/* --- 4. 半透明 Sticky Header --- */
+header {
+    background: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border-bottom: 1px solid rgba(109, 155, 195, 0.05) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+}
+
+.date-card {
+    background: rgba(255, 255, 255, 0.3) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(109, 155, 195, 0.08) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 8px !important;
+    min-height: 52px !important;
+    line-height: 1.1 !important;
+}
+
+.date-card.active, [class*="date-card"].active {
+    background: var(--primary-color) !important;
+    color: white !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 4px 12px rgba(109, 155, 195, 0.3) !important;
+    transform: scale(1.05);
+}
+
+/* --- 5. 半透明 Bottom Nav --- */
+nav {
+    background: rgba(255, 255, 255, 0.5) !important;
+    backdrop-filter: blur(25px) !important;
+    -webkit-backdrop-filter: blur(25px) !important;
+    border-top: 1px solid rgba(109, 155, 195, 0.05) !important;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.03) !important;
+}
+
+/* --- 6. 封殺亮藍色 --- */
+[class*="border-blue"] { border-color: var(--primary-color) !important; }
+[class*="bg-blue"]:not(.fa-pen):not([class*="bg-blue-50"]), 
+[class*="bg-blue-600"]:not(.fa-pen) { 
+    background-color: var(--primary-color) !important; 
+}
+[class*="text-blue"]:not(.fa-pen):not([class*="bg-blue-50"]), 
+[class*="text-blue-600"]:not(.fa-pen) { 
+    color: var(--primary-color) !important; 
+}
+
+.wish-card [class*="bg-blue-50"] {
+    background-color: var(--primary-light) !important;
+    color: var(--primary-color) !important;            
+    border: 1px solid rgba(109, 155, 195, 0.2) !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px rgba(109, 155, 195, 0.1) !important;
+}
+
+[class*="text-[9px]"], [class*="text-[10px]"], [class*="text-xs"] { font-size: 14px !important; }
+.content-text, .remark-text, .wish-content { white-space: pre-wrap !important; word-break: break-all; }
+
+/* --- 7. 載入中 --- */
+.loading-overlay { 
+    position: fixed !important; inset: 0 !important; 
+    background: rgba(255, 255, 255, 0.8) !important; 
+    backdrop-filter: blur(15px) !important; z-index: 9999;
+    display: flex !important; flex-direction: column !important; 
+    align-items: center !important; justify-content: center !important; 
+}
+
+/* --- 8. 行程卡片 (動態色池) --- */
+.itinerary-item {
+    border-radius: var(--radius-lg) !important;
+    border-left: 6px solid var(--primary-color) !important;
+    /* 預設稍微帶一點點主題色底 */
+    background: var(--primary-light) !important; 
+    box-shadow: 0 8px 20px -4px color-mix(in srgb, var(--primary-color), transparent 85%) !important;
+    transition: all 0.3s ease;
+}
+
+/* 使用 color-mix 自動產生極淺底色 (需要現代瀏覽器支援) */
+/* 如果不支援，我們會使用下面的 class 強制覆蓋 */
+
+.cat-color-0 { 
+    border-left-color: var(--accent-1) !important; 
+    background-color: color-mix(in srgb, var(--accent-1), white 92%) !important;
+}
+.cat-color-0 i { color: var(--accent-1) !important; }
+
+.cat-color-1 { 
+    border-left-color: var(--accent-2) !important; 
+    background-color: color-mix(in srgb, var(--accent-2), white 92%) !important;
+}
+.cat-color-1 i { color: var(--accent-2) !important; }
+
+.cat-color-2 { 
+    border-left-color: var(--accent-3) !important; 
+    background-color: color-mix(in srgb, var(--accent-3), white 92%) !important;
+}
+.cat-color-2 i { color: var(--accent-3) !important; }
+
+.cat-color-3 { 
+    border-left-color: var(--accent-4) !important; 
+    background-color: color-mix(in srgb, var(--accent-4), white 92%) !important;
+}
+.cat-color-3 i { color: var(--accent-4) !important; }
+
+.cat-color-4 { 
+    border-left-color: var(--accent-5) !important; 
+    background-color: color-mix(in srgb, var(--accent-5), white 92%) !important;
+}
+.cat-color-4 i { color: var(--accent-5) !important; }
+
+.cat-color-5 { 
+    border-left-color: var(--accent-6) !important; 
+    background-color: color-mix(in srgb, var(--accent-6), white 92%) !important;
+}
+.cat-color-5 i { color: var(--accent-6) !important; }
+
+/* --- 9. 記帳卡片優化 (變數應用) --- */
+.expense-summary-card, [class*="bg-slate-900"] { 
+    background: var(--expense-card-gradient) !important; 
+    color: var(--expense-card-text) !important;
+    width: 100% !important; box-sizing: border-box;
+    border-radius: var(--radius-xl) !important;
+}
+
+.expense-filter-select {
+    background: var(--expense-filter-bg) !important;
+    border: 1px solid var(--expense-box-border) !important;
+    color: var(--expense-card-text) !important;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+}
+
+.expense-filter-select:focus {
+    background: var(--expense-filter-focus) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.total-amount-box {
+    background: var(--expense-box-bg) !important;
+    border: 1px solid var(--expense-box-border) !important;
+    border-radius: 1.5rem !important;
+    padding: 1.25rem !important;
+    margin-top: 0.5rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.total-amount-value {
+    color: var(--expense-card-text) !important;
+    text-shadow: 0 2px 15px rgba(255, 255, 255, 0.2);
+    font-weight: 900;
+}
+
+.summary-grid { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; padding: 10px 0 !important; }
+.summary-item {
+    flex: 1 1 calc(50% - 10px) !important;
+    padding: 12px 8px !important;
+    background: var(--expense-box-bg) !important;
+    border: 1px solid var(--expense-box-border) !important;
+    color: var(--expense-card-text) !important;
+    border-radius: 12px !important;
+}
+
+.table-container {
+    width: 100% !important;
+    overflow-x: auto !important;
+    background: white !important;
+    border-radius: var(--radius-lg) !important;
+}
+table { min-width: 500px !important; width: 100% !important; }
+th, td { padding: 12px 10px !important; }
+
+/* --- 10. 許願卡片 --- */
+.wish-card {
+    background: var(--wish-bg) !important; /* 使用變數底色 */
+    border: 3px dashed var(--wish-border) !important; /* 使用變數虛線顏色 */
+    border-radius: var(--radius-lg) !important; 
+    padding: 1.5rem !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important;
+    transition: all 0.3s ease; /* 增加切換時的平滑感 */
+}
+
+/* 許願卡片內的藍色小標籤 (例如：已買、必去) */
+.wish-card [class*="bg-blue-50"] {
+    background-color: var(--wish-tag-bg) !important;
+    color: var(--primary-color) !important;            
+    border: 1px solid var(--wish-border) !important;
+}
+
+/* 許願頁面上方的標籤篩選器 */
+.wish-tags-container {
+    background: var(--primary-light) !important; /* 跟隨主題淺色背景 */
+    opacity: 0.9;
+}
+
+.wish-card.item-done { 
+    background: white !important; 
+    border: 2px solid #f0f4f8 !important;
+    opacity: 0.5; 
+    filter: grayscale(1); 
+}
+
+.fa-circle {
+    font-weight: 400 !important;
+    color: var(--text-muted) !important;
+}
+
+.fa-pen, .fa-trash, .fa-pen-to-square, .fa-regular.fa-pen-to-square {
+    color: var(--text-muted) !important;
+    transition: color 0.2s ease !important;
+}
+
+.fa-pen:hover, .fa-pen-to-square:hover { 
+    color: var(--primary-color) !important; 
+}
+.fa-trash:hover { 
+    color: #e57373 !important; 
+}
+
+.tag-filter.active, [class*="tag-filter"].active {
+    background-color: var(--primary-color) !important;
+    color: white !important;
+}
+.fa-circle-check { color: var(--primary-color) !important; }
+
+/* --- 10.1 許願頁面搜尋列修正 --- */
+.wish-search-container input {
+    background-color: var(--search-bg) !important;
+    color: var(--text-main) !important;
+    border: 1px solid transparent !important;
+    transition: all 0.3s ease !important;
+}
+
+.wish-search-container input::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.7;
+}
+
+.wish-search-container input:focus {
+    background-color: white !important;
+    box-shadow: 0 0 0 4px var(--search-focus-ring) !important;
+    border-color: var(--primary-color) !important;
+}
+
+/* 修正搜尋圖示顏色 (放大鏡) */
+.wish-search-container i {
+    color: var(--primary-color) !important;
+    opacity: 0.6;
+}
+
+/* --- 11. 底部按鈕與修正 (區分圓形與長方形) --- */
+.tab-btn.active, .tab-btn.active i, .tab-btn.active span {
+    color: var(--primary-color) !important;
+}
+
+/* A. 右下角的新增按鈕：必須是圓形 */
+.btn-floating, 
+[class*="bottom-28"].bg-blue-600 {
+    width: 60px !important; 
+    height: 60px !important;
+    border-radius: 50% !important; /* 強制圓形 */
+    display: flex !important;
+    align-items: center !important; 
+    justify-content: center !important;
+    background-color: var(--primary-color) !important;
+    box-shadow: 0 8px 20px rgba(109, 155, 195, 0.4) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    border: none !important;
+    padding: 0 !important;
+}
+
+/* B. 彈窗內的送出/儲存按鈕：必須是長方形圓角 */
+button[type="submit"] {
+    width: 100% !important; /* 滿寬 */
+    height: 54px !important;
+    border-radius: var(--radius-lg) !important; /* 繼承變數圓角 */
+    background-color: var(--primary-color) !important;
+    box-shadow: 0 6px 15px rgba(109, 155, 195, 0.3) !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    color: white !important;
+    font-weight: bold !important;
+    margin-top: 10px !important;
+}
+
+/* C. Hover 效果分開處理 */
+/* 圓形按鈕 Hover：輕微上浮 */
+.btn-floating:hover, 
+[class*="bottom-28"].bg-blue-600:hover {
+    transform: translateY(-3px) !important;
+    box-shadow: 0 12px 25px rgba(109, 155, 195, 0.5) !important;
+}
+
+/* 長方形按鈕 Hover：顏色微亮，陰影加強 */
+button[type="submit"]:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 8px 20px rgba(109, 155, 195, 0.4) !important;
+}
+
+/* 按鈕點擊反應 (Active) */
+.btn-floating:active, 
+button[type="submit"]:active {
+    transform: scale(0.96) !important;
+    opacity: 0.9 !important;
+}
+
+/* 針對按鈕內的圖示修正 */
+.btn-floating i, button[type="submit"] i {
+    font-size: 1.2rem !important;
+}
+
+/* PhotoSwipe 修正 */
+.pswp__button--arrow--left, .pswp__button--arrow--right {
+    width: 60px !important;
+    height: 100px !important;
+    background-color: rgba(0,0,0,0.05) !important;
+}
+.pswp__img { cursor: grab !important; }
+.pswp__img:active { cursor: grabbing !important; }
+
+input[type="number"] { -moz-appearance: textfield; min-width: 0; }
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* --- 分頁推移動畫 --- */
+.v-enter-active, .v-leave-active {
+    transition: transform 0.3s ease-out, opacity 0.3s;
+}
+
+/* 這裡是核心：當切換分頁時，畫面會左右推移 */
+.slide-right-enter-from { transform: translateX(100%); opacity: 0; }
+.slide-right-leave-to { transform: translateX(-100%); opacity: 0; }
+
+.slide-left-enter-from { transform: translateX(-100%); opacity: 0; }
+.slide-left-leave-to { transform: translateX(100%); opacity: 0; }
+
+/* 燈箱內部圖片的過渡，讓縮放更平滑 */
+.lightbox img {
+    will-change: transform;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+[v-cloak] { display: none; }
+
+/* 許願標籤容器 */
+.wish-tags-container {
+    /* padding 上下增加，特別是下方，給滑桿留空間 */
+    padding: 12px 0 4px 0; 
+    background: rgba(248, 250, 252, 0.5); 
+    border-radius: 16px;
+    margin-bottom: 10px !important;
+    /* 確保橫向捲動流暢 */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* 針對 Android 手機可能會出現的滑桿進行美化 */
+.wish-tags-container::-webkit-scrollbar {
+    height: 4px; /* 設定滑桿高度 */
+}
+
+.wish-tags-container::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.05); /* 極淡的滑桿顏色 */
+    border-radius: 10px;
+}
+
+/* 讓標籤不要緊貼容器邊緣 */
+.flex-nowrap.pb-3 {
+    padding-bottom: 12px !important; /* 這行是關鍵：把滑桿往下推 */
+}
+
+/* 在 style.css 加入 */
+.tab-content-enter-active, .tab-content-leave-active {
+  transition: opacity 0.2s ease;
+}
+.tab-content-enter-from, .tab-content-leave-to {
+  opacity: 0;
+}
+
+/* 1. 修正：圖示強制字體，防止被粉圓體蓋掉 */
+.fa-solid, .fa-regular, .fa-brands {
+    font-family: "Font Awesome 6 Free" !important;
+    font-style: normal !important;
+    display: inline-block !important;
+}
+
+/* 2. 修正：加深圖示顏色，確保可見度 */
+.fa-pen, .fa-trash, .fa-pen-to-square {
+    color: #64748b !important; /* 比 text-muted 深一點的藍灰色 */
+    opacity: 1 !important;
+    visibility: visible !important;
+}

@@ -1,0 +1,12 @@
+{
+  "name": "拾光旅圖",
+  "short_name": "拾光旅圖",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

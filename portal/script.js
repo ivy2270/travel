@@ -320,19 +320,38 @@ function startApp(BOOT_CONFIG, tripId) {
                 uploading.value = false;
             };
 
-            const fetchData = async () => {
-                if (!allData.value.itinerary.length) loading.value = true; 
-                try {
-                    const url = isAdmin.value ? `${GAS_URL}?key=${USER_KEY.value}` : GAS_URL;
-                    const res = await fetch(url).then(r => r.json());
-                    allData.value = res;
-                    settingForm.value = { ...res.settings };
-                    localRates.value = typeof res.settings.rates === 'string' ? JSON.parse(res.settings.rates) : (res.settings.rates || []);
-                    localStorage.setItem(`cache_${tripId}`, JSON.stringify(res)); 
-                } catch (e) { console.error("Fetch error:", e); } 
-                finally { loading.value = false; }
-            };
-
+const fetchData = async () => {
+    // 如果沒快取資料才顯示載入中動畫
+    if (!allData.value.itinerary.length) loading.value = true; 
+    
+    try {
+        const url = isAdmin.value ? `${GAS_URL}?key=${USER_KEY.value}` : GAS_URL;
+        const res = await fetch(url).then(r => r.json());
+        
+        // 1. 儲存核心資料
+        allData.value = res;
+        
+        // 2. [關鍵] 更新 PWA 名稱與標題 (使用 System 表格回傳的 appName)
+        if (res.appName) {
+            document.title = res.appName;
+            // 這裡確保使用最新抓到的 appName 更新 Manifest
+            updatePwaManifest(res.appName, tripId, USER_KEY.value, BOOT_CONFIG.theme_id);
+        }
+        
+        // 3. 處理設定檔與匯率
+        settingForm.value = { ...res.settings };
+        localRates.value = typeof res.settings.rates === 'string' ? 
+            JSON.parse(res.settings.rates) : (res.settings.rates || []);
+            
+        // 4. 更新本機快取
+        localStorage.setItem(`cache_${tripId}`, JSON.stringify(res)); 
+        
+    } catch (e) { 
+        console.error("Fetch error:", e); 
+    } finally { 
+        loading.value = false; 
+    }
+};
             const submitForm = async () => {
                 if (uploading.value) return alert("圖片上傳中...");
                 loading.value = true;
@@ -552,33 +571,37 @@ function updatePwaManifest(name, tripId, key, themeId) {
     const link = document.getElementById('manifest-link');
     if (!link) return;
 
-    // 定義主題對應的 hex 顏色 (與 CSS 中的 --primary-color 同步)
     const themeColors = {
-        'spring': '#e7a8a8', // 春季粉
-        'summer': '#6d9bc3', // 夏季藍
-        'autumn': '#d9a05b', // 秋季大地
-        'winter': '#8da9c4'  // 冬季莫蘭迪藍
+        'spring': '#e7a8a8', 'summer': '#6d9bc3', 'autumn': '#d9a05b', 'winter': '#8da9c4'
     };
     const activeColor = themeColors[themeId] || '#e7a8a8';
 
     const manifest = {
         "name": name,
-        "short_name": name,
+        "short_name": name, // 手機桌面圖示下方的名稱
         "start_url": `index.html?trip=${tripId}${key ? '&key='+key : ''}`,
         "display": "standalone",
         "background_color": "#f8fafc",
         "theme_color": activeColor,
-        "icons": [{ 
-            "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png", 
-            "sizes": "512x512", 
-            "type": "image/png", 
-            "purpose": "any maskable" 
+        "icons": [{
+            "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png",
+            "sizes": "512x512",
+            "type": "image/png"
         }]
     };
 
-    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-    if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href);
-    link.setAttribute('href', URL.createObjectURL(blob));
+    const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    link.href = url;
+
+    // 同步更新行動裝置狀態列顏色
+    let metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (!metaTheme) {
+        metaTheme = document.createElement('meta');
+        metaTheme.name = 'theme-color';
+        document.head.appendChild(metaTheme);
+    }
+    metaTheme.content = activeColor;
 }
 
 initPlatform();

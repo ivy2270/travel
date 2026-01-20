@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-pro-v5'; // 更新版本號
+const CACHE_NAME = 'travel-pro-v6'; // 更新版本號
 const ASSETS = [
   './',
   './index.html',
@@ -36,4 +36,5 @@ self.addEventListener('fetch', (e) => {
       return caches.match(e.request);
     })
   );
+
 });

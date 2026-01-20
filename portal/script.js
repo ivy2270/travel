@@ -33,8 +33,8 @@ async function initPlatform() {
         const currentKey = localStorage.getItem(`key_${tripId}`) || "";
 
         // --- 3. 動態更新 Manifest (PWA 安裝設定) ---
-        // 使用總機提供的 display_name 作為 App 名稱
-        updatePwaManifest(res.display_name || "拾光旅圖", tripId, currentKey);
+        // 使用總機提供的 display_name 與 theme_id 更新 PWA 顏色與名稱
+        updatePwaManifest(res.display_name || "拾光旅圖", tripId, currentKey, res.theme_id || 'spring');
 
         // --- 4. 啟動 Vue App ---
         startApp(res, tripId);
@@ -102,7 +102,7 @@ function startApp(BOOT_CONFIG, tripId) {
                     USER_KEY.value = "";
                     localStorage.removeItem(`key_${tripId}`);
                     // 重新整理 Manifest 變成訪客版
-                    updatePwaManifest(BOOT_CONFIG.display_name, tripId, "");
+                    updatePwaManifest(BOOT_CONFIG.display_name, tripId, "", BOOT_CONFIG.theme_id);
                 } else {
                     alert("操作失敗：" + (res.message || "未知錯誤"));
                 }
@@ -536,18 +536,41 @@ function showErrorPage(msg) {
     document.body.innerHTML = `<div class="p-10 text-center flex flex-col items-center justify-center min-h-screen text-slate-500"><i class="fa-solid fa-circle-exclamation text-4xl text-red-400 mb-4"></i><h2 class="text-xl font-bold">${msg}</h2></div>`;
 }
 
-function updatePwaManifest(name, tripId, key) {
+/**
+ * 動態更新 Manifest 與 PWA 標題列顏色
+ * @param {string} name - 行程顯示名稱
+ * @param {string} tripId - 行程ID
+ * @param {string} key - 管理金鑰
+ * @param {string} themeId - 主題ID (spring, summer, autumn, winter)
+ */
+function updatePwaManifest(name, tripId, key, themeId) {
     const link = document.getElementById('manifest-link');
     if (!link) return;
+
+    // 定義主題對應的 hex 顏色 (與 CSS 中的 --primary-color 同步)
+    const themeColors = {
+        'spring': '#e7a8a8', // 春季粉
+        'summer': '#6d9bc3', // 夏季藍
+        'autumn': '#d9a05b', // 秋季大地
+        'winter': '#8da9c4'  // 冬季莫蘭迪藍
+    };
+    const activeColor = themeColors[themeId] || '#e7a8a8';
+
     const manifest = {
         "name": name,
         "short_name": name,
         "start_url": `index.html?trip=${tripId}${key ? '&key='+key : ''}`,
         "display": "standalone",
         "background_color": "#f8fafc",
-        "theme_color": "#2563eb",
-        "icons": [{ "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+        "theme_color": activeColor,
+        "icons": [{ 
+            "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png", 
+            "sizes": "512x512", 
+            "type": "image/png", 
+            "purpose": "any maskable" 
+        }]
     };
+
     const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
     if (link.href.startsWith('blob:')) URL.revokeObjectURL(link.href);
     link.setAttribute('href', URL.createObjectURL(blob));

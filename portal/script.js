@@ -8,12 +8,14 @@ async function initPlatform() {
     const tripId = urlParams.get('trip');
 
     if (!tripId) {
-        showErrorPage("請提供行程 ID<br><small>範例: ?trip=japan-2024</small>");
+        showErrorPage("請提供行程 ID");
         return;
     }
 
+    // --- [修正 1] 在 fetch 總機前，先建立一個預設的 Manifest，防止瀏覽器抓不到東西 ---
+    updatePwaManifest("載入中...", tripId, "", 'spring');
+
     try {
-        // --- 1. 向總機查詢行程設定 ---
         const res = await fetch(`${CATALOG_SERVICE_URL}?trip=${tripId}`).then(r => r.json());
         
         if (res.error) {
@@ -21,26 +23,29 @@ async function initPlatform() {
             return;
         }
 
-        // --- 2. 獲取當前金鑰（從網址或快取） ---
+        // --- [修正 2] 金鑰邏輯：網址優先，若網址沒 key 參數則清空快取變訪客 ---
         const keyFromUrl = urlParams.get('key');
         if (keyFromUrl !== null) {
+            // 只要網址有出現 key= 這個字
             if (keyFromUrl.trim() !== "") {
                 localStorage.setItem(`key_${tripId}`, keyFromUrl);
             } else {
                 localStorage.removeItem(`key_${tripId}`);
             }
+        } else {
+            // 網址完全沒有 key 參數 -> 強制清空，變訪客
+            localStorage.removeItem(`key_${tripId}`);
         }
+
         const currentKey = localStorage.getItem(`key_${tripId}`) || "";
 
-        // --- 3. 動態更新 Manifest (PWA 安裝設定) ---
-        // 使用總機提供的 display_name 與 theme_id 更新 PWA 顏色與名稱
+        // --- [修正 3] 取得總機資料後，立即更新為真正的 APP 名稱 ---
         updatePwaManifest(res.display_name || "拾光旅圖", tripId, currentKey, res.theme_id || 'spring');
 
-        // --- 4. 啟動 Vue App ---
         startApp(res, tripId);
 
     } catch (err) {
-        showErrorPage("總機連線失敗，請檢查網路");
+        showErrorPage("總機連線失敗");
     }
 }
 

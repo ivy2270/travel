@@ -274,7 +274,7 @@
         </main>
 
         <div v-if="showModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-            <div @click="showModal = false" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+            <div @click="showModal = false" class="absolute inset-0 modal-overlay"></div>
             <div class="relative bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl overflow-y-auto max-h-[92vh] no-scrollbar animate-slide-up">
                 <div class="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-8 sm:hidden"></div>
                 <h2 class="text-xl font-black mb-8 text-slate-800 tracking-tight">{{ isEditing ? '編輯' : '新增' }}{{ tabNames[currentTab] }}</h2>

@@ -28,6 +28,7 @@
     /* 春季色池 */
     --accent-1: #a3b18a; --accent-2: #e9c46a; --accent-3: #f4dada;
     --accent-4: #d9a05b; --accent-5: #94b8b4; --accent-6: #c8b6ff;
+	--overlay-bg: rgba(231, 168, 168, 0.5); /* 春季粉 + 80% 透明度 */
 }
 
 /* 🌊 夏季 - 清爽明亮色系 */
@@ -41,6 +42,7 @@
     /* 夏季色池 */
     --accent-1: #82a198; --accent-2: #f2cc8f; --accent-3: #e7a8a8;
     --accent-4: #e07a5f; --accent-5: #3d5a80; --accent-6: #98c1d9;
+	--overlay-bg: rgba(109, 155, 195, 0.5); /* 夏季藍 + 80% 透明度 */
 }
 
 /* 🍂 秋季 - 暖感大地色系 */
@@ -54,6 +56,7 @@
     /* 秋季色池 */
     --accent-1: #6b705c; --accent-2: #ddbea9; --accent-3: #cb997e;
     --accent-4: #a47148; --accent-5: #667761; --accent-6: #91614a;
+	--overlay-bg: rgba(217, 160, 91, 0.5); /* 秋季棕 + 80% 透明度 */
 }
 
 /* ❄️ 冬季 - 冷靜莫蘭迪色系 */
@@ -67,6 +70,7 @@
     /* 冬季色池 */
     --accent-1: #465a65; --accent-2: #9cc5a1; --accent-3: #b5c2cc;
     --accent-4: #546a7b; --accent-5: #3e4c59; --accent-6: #7d8ea3;
+	--overlay-bg: rgba(141, 169, 196, 0.5); /* 冬季藍 + 80% 透明度 */
 }
 
 /* --- 3. 全域修正 --- */
@@ -501,4 +505,12 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
     color: #64748b !important; /* 比 text-muted 深一點的藍灰色 */
     opacity: 1 !important;
     visibility: visible !important;
+}
+
+/* --- 定義 modal-overlay 樣式 --- */
+.modal-overlay {
+    background-color: var(--overlay-bg); /* 自動抓取上面的主題透明色 */
+    backdrop-filter: blur(8px);          /* 毛玻璃模糊效果 */
+    -webkit-backdrop-filter: blur(8px);  /* 支援 iOS */
+    transition: all 0.3s ease;
 }

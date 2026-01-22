@@ -525,7 +525,19 @@ function startApp(BOOT_CONFIG, tripId) {
                     } catch (e) { showToast("網路錯誤", "error"); } finally { loading.value = false; }
                 },
                 openGoogleMaps: (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'),
-                linkify: (text) => text ? text.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (url) => `<a href="${url}" target="_blank" class="text-blue-500 underline break-all">${url}</a>`) : "",
+                linkify: (text) => {
+    if (!text) return "";
+    // 🔧 修正：先跳脫 HTML 特殊字符，避免 </script> 等標籤造成截斷
+    const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/\n/g, '<br>'); // 保留換行
+    // 然後處理連結
+    return escaped.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (url) => `<a href="${url}" target="_blank" class="text-blue-500 underline break-all">${url}</a>`);
+},
                 parseImages, removeImage: (idx) => { if(currentTab.value==='expense') form.value.image=''; else form.value.image.splice(idx,1); },
                 compressAndUpload, isItemSelected: (it, f) => (form.value[f] || "").split(',').includes(it),
                 toggleSelection: (it, f) => { let c = (form.value[f] || "").split(',').filter(x => x); const i = c.indexOf(it); if (i > -1) c.splice(i, 1); else c.push(it); form.value[f] = c.join(','); },

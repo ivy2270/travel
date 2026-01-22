@@ -1,6 +1,5 @@
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
-// 【重要】填入你部署好的「目錄總機」GAS 網址
 const CATALOG_SERVICE_URL = "https://script.google.com/macros/s/AKfycbxA8phevTocRDd0WlcguLa4JIwgYbJnILJF97ZTCAgDeUhC2FUtJ2KWzpRaZnDA0efSMA/exec";
 
 async function initPlatform() {
@@ -12,7 +11,6 @@ async function initPlatform() {
         return;
     }
 
-    // --- [修正 1] 在 fetch 總機前，先建立一個預設的 Manifest，防止瀏覽器抓不到東西 ---
     updatePwaManifest("載入中...", tripId, "", 'spring');
 
     try {
@@ -23,25 +21,19 @@ async function initPlatform() {
             return;
         }
 
-        // --- [修正 2] 金鑰邏輯：網址優先，若網址沒 key 參數則清空快取變訪客 ---
         const keyFromUrl = urlParams.get('key');
         if (keyFromUrl !== null) {
-            // 只要網址有出現 key= 這個字
             if (keyFromUrl.trim() !== "") {
                 localStorage.setItem(`key_${tripId}`, keyFromUrl);
             } else {
                 localStorage.removeItem(`key_${tripId}`);
             }
         } else {
-            // 網址完全沒有 key 參數 -> 強制清空，變訪客
             localStorage.removeItem(`key_${tripId}`);
         }
 
         const currentKey = localStorage.getItem(`key_${tripId}`) || "";
-
-        // --- [修正 3] 取得總機資料後，立即更新為真正的 APP 名稱 ---
         updatePwaManifest(res.display_name || "拾光旅圖", tripId, currentKey, res.theme_id || 'spring');
-
         startApp(res, tripId);
 
     } catch (err) {
@@ -58,14 +50,19 @@ function startApp(BOOT_CONFIG, tripId) {
         setup() {
             const GAS_URL = BOOT_CONFIG.gas_url;
             
-            // --- 金鑰與權限狀態 ---
             const USER_KEY = ref(localStorage.getItem(`key_${tripId}`) || "");
             const isAdmin = computed(() => {
                 const k = USER_KEY.value;
                 return k && String(k).trim() !== "" && String(k) !== "null";
             });
 
-            // --- 1. 基礎狀態 ---
+            // --- Toast 狀態與功能 ---
+            const toast = ref({ show: false, msg: '', type: 'success' });
+            const showToast = (msg, type = 'success') => {
+                toast.value = { show: true, msg, type };
+                setTimeout(() => { toast.value.show = false; }, 3000);
+            };
+
             const currentTab = ref('itinerary');
             const loading = ref(false);
             const uploading = ref(false); 
@@ -77,7 +74,6 @@ function startApp(BOOT_CONFIG, tripId) {
             const wishSearchQuery = ref(""); 
             const debtFilter = ref({ payer: 'all', debtor: 'all' });
             
-            // --- 2. 燈箱與手勢狀態 ---
             const lightboxUrl = ref(null); 
             const lightboxUrls = ref([]); 
             const lightboxIndex = ref(0); 
@@ -97,23 +93,23 @@ function startApp(BOOT_CONFIG, tripId) {
             const settingForm = ref({ travelers: "", categories: "", wishTags: "", paymentMethods: "現金,信用卡" });
             const localRates = ref([]);
             
+            let syncTimer = null;
+            const pendingWishes = new Set();
+
             const tabNames = { itinerary:'行程', expense:'記帳', wish:'許願', setting:'設定' };
             const tabIcons = { itinerary:'fa-calendar-days', expense:'fa-wallet', wish:'fa-wand-magic-sparkles', setting:'fa-gear' };
             
-            // 統一錯誤處理
             const handleApiError = (res) => {
                 if (res && res.message && (res.message.includes("金鑰") || res.message.includes("權限"))) {
-                    alert("驗證失敗，管理功能已停用");
+                    showToast("驗證失敗，管理功能已停用", "error");
                     USER_KEY.value = "";
                     localStorage.removeItem(`key_${tripId}`);
-                    // 重新整理 Manifest 變成訪客版
                     updatePwaManifest(BOOT_CONFIG.display_name, tripId, "", BOOT_CONFIG.theme_id);
                 } else {
-                    alert("操作失敗：" + (res.message || "未知錯誤"));
+                    showToast("操作失敗：" + (res.message || "未知錯誤"), "error");
                 }
             };
 
-            // --- 3. 輔助工具 ---
             const categoryColorMap = computed(() => {
                 const map = {};
                 const categories = [...new Set((allData.value.itinerary || []).map(i => i.category).filter(Boolean))];
@@ -152,7 +148,6 @@ function startApp(BOOT_CONFIG, tripId) {
 
             const rawToDateStr = (raw) => (raw && String(raw).includes('T')) ? raw.split('T')[0] : String(raw || "");
 
-            // --- 4. 計算屬性 ---
             const zoomStyle = computed(() => ({
                 transform: `translate(${offsetX.value}px, ${offsetY.value}px) scale(${zoomScale.value})`,
                 transition: isDragging.value ? 'none' : 'transform 0.15s ease-out'
@@ -171,12 +166,12 @@ function startApp(BOOT_CONFIG, tripId) {
                     }
                 });
                 return list.filter(i => filterDate.value ? rawToDateStr(i.day) === filterDate.value : true)
-                           .sort((a,b) => {
+                            .sort((a,b) => {
                                const dateA = rawToDateStr(a.day), dateB = rawToDateStr(b.day);
                                if (dateA !== dateB) return dateA.localeCompare(dateB);
                                const tA = String(a.time || "0000").padStart(4, '0'), tB = String(b.time || "0000").padStart(4, '0');
                                return tA.localeCompare(tB);
-                           });
+                            });
             });
 
             const sortedExpensesByFilter = computed(() => {
@@ -205,6 +200,7 @@ function startApp(BOOT_CONFIG, tripId) {
                     const statusA = isWishDone(a) ? 1 : 0;
                     const statusB = isWishDone(b) ? 1 : 0;
                     if (statusA !== statusB) return statusA - statusB;
+                    
                     const parseDate = (obj) => {
                         const timeStr = obj.updatetime || obj.updateTime || "";
                         if (!timeStr) return 0;
@@ -218,7 +214,6 @@ function startApp(BOOT_CONFIG, tripId) {
                 });
             });
 
-            // --- 5. 燈箱與分頁核心手勢邏輯 ---
             const handleSwipe = () => {
                 if (zoomScale.value > 1.1) return; 
                 const swipeThreshold = 100;
@@ -272,7 +267,6 @@ function startApp(BOOT_CONFIG, tripId) {
                 }
             };
 
-            // --- 6. 圖片與資料處理 ---
             const resizeImage = (file) => {
                 return new Promise((resolve) => {
                     const reader = new FileReader();
@@ -320,58 +314,43 @@ function startApp(BOOT_CONFIG, tripId) {
                 uploading.value = false;
             };
 
-const fetchData = async () => {
-    // 如果沒快取資料才顯示載入中動畫
-    if (!allData.value.itinerary.length) loading.value = true; 
-    
-    try {
-        const url = isAdmin.value ? `${GAS_URL}?key=${USER_KEY.value}` : GAS_URL;
-        const res = await fetch(url).then(r => r.json());
-        
-        // 1. 儲存核心資料
-        allData.value = res;
-        
-        // 2. [關鍵] 更新 PWA 名稱與標題 (使用 System 表格回傳的 appName)
-        if (res.appName) {
-            document.title = res.appName;
-            // 這裡確保使用最新抓到的 appName 更新 Manifest
-            updatePwaManifest(res.appName, tripId, USER_KEY.value, BOOT_CONFIG.theme_id);
-        }
-        
-        // 3. 處理設定檔與匯率
-        settingForm.value = { ...res.settings };
-        localRates.value = typeof res.settings.rates === 'string' ? 
-            JSON.parse(res.settings.rates) : (res.settings.rates || []);
-            
-        // 4. 更新本機快取
-        localStorage.setItem(`cache_${tripId}`, JSON.stringify(res)); 
-        
-    } catch (e) { 
-        console.error("Fetch error:", e); 
-    } finally { 
-        loading.value = false; 
-    }
-};
+            const fetchData = async () => {
+                if (pendingWishes.size > 0) return;
+                if (!allData.value.itinerary.length) loading.value = true; 
+                try {
+                    const url = isAdmin.value ? `${GAS_URL}?key=${USER_KEY.value}` : GAS_URL;
+                    const res = await fetch(url).then(r => r.json());
+                    allData.value = res;
+                    if (res.appName) {
+                        document.title = res.appName;
+                        updatePwaManifest(res.appName, tripId, USER_KEY.value, BOOT_CONFIG.theme_id);
+                    }
+                    settingForm.value = { ...res.settings };
+                    localRates.value = typeof res.settings.rates === 'string' ? 
+                        JSON.parse(res.settings.rates) : (res.settings.rates || []);
+                    localStorage.setItem(`cache_${tripId}`, JSON.stringify(res)); 
+                } catch (e) { console.error("Fetch error:", e); } 
+                finally { loading.value = false; }
+            };
+
             const submitForm = async () => {
-                if (uploading.value) return alert("圖片上傳中...");
+                if (uploading.value) return showToast("圖片上傳中...", "error");
                 loading.value = true;
                 try {
                     let dataToSave = { ...form.value };
                     const action = isEditing.value ? 'updateData' : 'addData';
                     const sheet = { itinerary: 'Itinerary', expense: 'Expenses', wish: 'Wishes' }[currentTab.value];
-                    
                     const res = await fetch(GAS_URL, { 
                         method: 'POST', 
                         body: JSON.stringify({ action, data: dataToSave, id: form.value.id || null, sheet, key: USER_KEY.value }) 
                     }).then(r => r.json());
 
                     if (res.success) {
+                        showToast(isEditing.value ? "更新成功" : "儲存成功");
                         showModal.value = false;
                         fetchData();
-                    } else {
-                        handleApiError(res);
-                    }
-                } catch (e) { alert("網路連線錯誤"); } 
+                    } else { handleApiError(res); }
+                } catch (e) { showToast("網路連線錯誤", "error"); } 
                 finally { loading.value = false; }
             };
 
@@ -386,10 +365,11 @@ const fetchData = async () => {
                 lightboxUrl.value = lightboxUrls.value[lightboxIndex.value];
             };
 
-            // --- 7. 生命周期 ---
             onMounted(() => {
                 const cached = localStorage.getItem(`cache_${tripId}`);
-                if (cached) { allData.value = JSON.parse(cached); }
+                if (cached) { 
+                    try { allData.value = JSON.parse(cached); } catch(e) {}
+                }
                 fetchData();
 
                 window.addEventListener('keydown', (e) => {
@@ -405,13 +385,10 @@ const fetchData = async () => {
                     const isSwipeable = !target.closest('.table-container') && !target.closest('.itinerary-date-filter') && 
                                       !target.closest('.wish-tags-container') && !target.closest('.card-image-slider') && 
                                       !target.closest('textarea') && !target.closest('input') && !showModal.value && !lightboxUrl.value;
-
                     if (isSwipeable) {
                         touchState.value.startX = e.touches[0].clientX;
                         touchState.value.startY = e.touches[0].clientY;
-                    } else {
-                        touchState.value.startX = 0;
-                    }
+                    } else { touchState.value.startX = 0; }
                 }, { passive: true });
 
                 window.addEventListener('touchend', (e) => {
@@ -422,33 +399,76 @@ const fetchData = async () => {
                 }, { passive: true });
             });
 
-            // --- 8. 待辦與其餘函數 ---
-            const toggleSubTodo = async (wish, index) => {
-                if (!isAdmin.value) return alert("權限不足，無法勾選");
-                const todos = parseTodos(wish.todo);
-                const originalTodoText = wish.todo;
-                todos[index].done = !todos[index].done;
-                const newTodoText = todos.map(t => `- [${t.done ? 'x' : ' '}] ${t.content}`).join('\n');
-                wish.todo = newTodoText;
+            const parseContentDetailed = (text) => {
+                if (!text) return [];
+                return text.split('\n').map((line, index) => {
+                    const isTodo = line.trim().startsWith('- [ ]') || line.trim().startsWith('- [x]');
+                    return {
+                        id: index,
+                        isTodo: isTodo,
+                        done: line.trim().startsWith('- [x]'),
+                        text: isTodo ? line.replace(/- \[[x ]\]/, '').trim() : line
+                    };
+                });
+            };
 
-                loading.value = true;
-                try {
-                    const res = await fetch(GAS_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ action: 'updateData', data: { ...wish, todo: newTodoText }, id: wish.id, sheet: 'Wishes', key: USER_KEY.value })
-                    }).then(r => r.json());
-                    if (!res.success) {
-                        handleApiError(res);
-                        wish.todo = originalTodoText;
+            const getCollapsedText = (text) => {
+                if (!text) return "";
+                return text.replace(/- \[[x ]\]/g, '').replace(/\n/g, ' ');
+            };
+
+            const toggleSubTodo = (wish, lineIndex) => {
+                if (!isAdmin.value) return showToast("權限不足，無法勾選", "error");
+                
+                const lines = wish.content.split('\n');
+                const targetLine = lines[lineIndex];
+                
+                if (targetLine.trim().startsWith('- [x]')) {
+                    lines[lineIndex] = targetLine.replace('- [x]', '- [ ]');
+                } else if (targetLine.trim().startsWith('- [ ]')) {
+                    lines[lineIndex] = targetLine.replace('- [ ]', '- [x]');
+                }
+
+                wish.content = lines.join('\n');
+                triggerSync(wish);
+            };
+
+            const toggleWishDone = (wish) => {
+                if (!isAdmin.value) return showToast("權限不足", "error");
+                wish.isDone = !isWishDone(wish);
+                triggerSync(wish);
+            };
+
+            const triggerSync = (wish) => {
+                pendingWishes.add(wish.id);
+                if (syncTimer) clearTimeout(syncTimer);
+                syncTimer = setTimeout(async () => {
+                    const idsToSync = Array.from(pendingWishes);
+                    pendingWishes.clear();
+
+                    for (const id of idsToSync) {
+                        const target = allData.value.wishes.find(w => w.id === id);
+                        if (!target) continue;
+                        try {
+                            await fetch(GAS_URL, {
+                                method: 'POST',
+                                body: JSON.stringify({ 
+                                    action: 'updateData', 
+                                    data: { ...target }, 
+                                    id: target.id, 
+                                    sheet: 'Wishes', 
+                                    key: USER_KEY.value 
+                                })
+                            });
+                        } catch (e) { console.error("Sync failed for wish:", id); }
                     }
-                } catch (e) {
-                    alert("網路錯誤");
-                    wish.todo = originalTodoText;
-                } finally { loading.value = false; }
+                }, 1500);
             };
 
             return { 
                 isAdmin,
+                toast,
+                showToast,
                 categoryColorMap, getCategoryColorClass,
                 currentTab, loading, uploading, uploadProgress, allData, tabNames, tabIcons, filteredItinerary, sortedExpensesByFilter, filteredTotalTWD, filteredWishes,
                 availableDates: computed(() => [...new Set((allData.value.itinerary || []).map(i => rawToDateStr(i.day)))].filter(d => d && !d.includes('1899')).sort()),
@@ -490,27 +510,19 @@ const fetchData = async () => {
                         loading.value = true; 
                         try {
                             const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteData', id, sheet, key: USER_KEY.value }) }).then(r => r.json());
-                            if (res.success) fetchData(); else handleApiError(res);
-                        } catch (e) { alert("網路錯誤"); } finally { loading.value = false; }
+                            if (res.success) { showToast("已刪除"); fetchData(); } else handleApiError(res);
+                        } catch (e) { showToast("網路錯誤", "error"); } finally { loading.value = false; }
                     } 
                 },
-                toggleWishDone: async (wish) => { 
-                    loading.value = true; 
-                    try {
-                        const res = await fetch(GAS_URL, { 
-                            method: 'POST', body: JSON.stringify({ action: 'updateData', data: { ...wish, isDone: !isWishDone(wish) }, id: wish.id, sheet: 'Wishes', key: USER_KEY.value }) 
-                        }).then(r => r.json());
-                        if (res.success) fetchData(); else handleApiError(res);
-                    } catch (e) { alert("網路錯誤"); } finally { loading.value = false; }
-                },
+                toggleWishDone,
                 saveSettings: async () => { 
                     loading.value = true; 
                     try {
                         const res = await fetch(GAS_URL, { 
                             method: 'POST', body: JSON.stringify({ action: 'updateSettings', data: { ...settingForm.value, rates: localRates.value }, key: USER_KEY.value }) 
                         }).then(r => r.json());
-                        if (res.success) { alert("設定已儲存"); fetchData(); } else handleApiError(res);
-                    } catch (e) { alert("網路錯誤"); } finally { loading.value = false; }
+                        if (res.success) { showToast("設定已儲存"); fetchData(); } else handleApiError(res);
+                    } catch (e) { showToast("網路錯誤", "error"); } finally { loading.value = false; }
                 },
                 openGoogleMaps: (loc) => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(loc)}`, '_blank'),
                 linkify: (text) => text ? text.replace(/(\b(https?):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig, (url) => `<a href="${url}" target="_blank" class="text-blue-500 underline break-all">${url}</a>`) : "",
@@ -527,7 +539,8 @@ const fetchData = async () => {
                 closeLightbox: () => { lightboxUrl.value = null; },
                 prevPhoto, nextPhoto, handleTouchStartImg, handleTouchMoveImg, handleTouchEndImg,
                 expandedItems, toggleExpand: (id) => { const i = expandedItems.value.indexOf(id); if (i > -1) expandedItems.value.splice(i, 1); else expandedItems.value.push(id); },
-                isWishDone, insertTodoTag: () => {
+                isWishDone,
+                insertTodoTag: () => {
                     const prefix = "- [ ] ";
                     if (!form.value.content) form.value.content = prefix;
                     else form.value.content += (form.value.content.endsWith('\n') ? '' : '\n') + prefix;
@@ -536,21 +549,16 @@ const fetchData = async () => {
                 handleWishKeydown: (e) => {
                     if (e.key === 'Enter') {
                         const el = e.target; const start = el.selectionStart; const lastLine = el.value.substring(0, start).split('\n').pop();
-                        if (lastLine.startsWith('- [ ] ') || lastLine.startsWith('- [x] ')) {
+                        if (lastLine.trim().startsWith('- [ ] ') || lastLine.trim().startsWith('- [x] ')) {
                             e.preventDefault(); const insertText = '\n- [ ] ';
                             form.value.content = el.value.substring(0, start) + insertText + el.value.substring(el.selectionEnd);
                             setTimeout(() => { el.selectionStart = el.selectionEnd = start + insertText.length; }, 0);
                         }
                     }
                 },
-                toggleSubTodo, hasTodos: (text) => text && text.includes('- ['),
-                parseTodos: (text) => {
-                    if (!text) return [];
-                    return text.split('\n').filter(line => line.trim().startsWith('- [')).map(line => ({
-                        done: line.trim().startsWith('- [x]'),
-                        content: line.replace(/- \[[x ]\]/, '').trim()
-                    }));
-                }
+                toggleSubTodo, 
+                getCollapsedText,
+                parseContentDetailed
             };
         }
     }).mount('#app');
@@ -560,47 +568,21 @@ function showErrorPage(msg) {
     document.body.innerHTML = `<div class="p-10 text-center flex flex-col items-center justify-center min-h-screen text-slate-500"><i class="fa-solid fa-circle-exclamation text-4xl text-red-400 mb-4"></i><h2 class="text-xl font-bold">${msg}</h2></div>`;
 }
 
-/**
- * 動態更新 Manifest 與 PWA 標題列顏色
- * @param {string} name - 行程顯示名稱
- * @param {string} tripId - 行程ID
- * @param {string} key - 管理金鑰
- * @param {string} themeId - 主題ID (spring, summer, autumn, winter)
- */
 function updatePwaManifest(name, tripId, key, themeId) {
     const link = document.getElementById('manifest-link');
     if (!link) return;
-
-    const themeColors = {
-        'spring': '#e7a8a8', 'summer': '#6d9bc3', 'autumn': '#d9a05b', 'winter': '#8da9c4'
-    };
+    const themeColors = { 'spring': '#e7a8a8', 'summer': '#6d9bc3', 'autumn': '#d9a05b', 'winter': '#8da9c4' };
     const activeColor = themeColors[themeId] || '#e7a8a8';
-
     const manifest = {
-        "name": name,
-        "short_name": name, // 手機桌面圖示下方的名稱
+        "name": name, "short_name": name,
         "start_url": `index.html?trip=${tripId}${key ? '&key='+key : ''}`,
-        "display": "standalone",
-        "background_color": "#f8fafc",
-        "theme_color": activeColor,
-        "icons": [{
-            "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }]
+        "display": "standalone", "background_color": "#f8fafc", "theme_color": activeColor,
+        "icons": [{ "src": "https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png", "sizes": "512x512", "type": "image/png" }]
     };
-
     const blob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    link.href = url;
-
-    // 同步更新行動裝置狀態列顏色
+    link.href = URL.createObjectURL(blob);
     let metaTheme = document.querySelector('meta[name="theme-color"]');
-    if (!metaTheme) {
-        metaTheme = document.createElement('meta');
-        metaTheme.name = 'theme-color';
-        document.head.appendChild(metaTheme);
-    }
+    if (!metaTheme) { metaTheme = document.createElement('meta'); metaTheme.name = 'theme-color'; document.head.appendChild(metaTheme); }
     metaTheme.content = activeColor;
 }
 

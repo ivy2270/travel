@@ -514,3 +514,65 @@ input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-app
     -webkit-backdrop-filter: blur(8px);  /* 支援 iOS */
     transition: all 0.3s ease;
 }
+
+/* 待辦事項點擊回饋 */
+.active\:bg-slate-50:active {
+    background-color: #f8fafc;
+}
+
+/* 一般文字段落間距 */
+.text-slate-700.leading-relaxed {
+    word-break: break-all;
+    white-space: pre-wrap; /* 保持手動換行，但不顯示標籤 */
+}
+
+/* Toast 外層容器：負責定位 */
+.toast-container {
+    position: fixed;
+    bottom: 110px; /* 剛好在浮動按鈕與導覽列上方 */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    pointer-events: none; /* 防止擋到下方的點擊 */
+}
+
+/* Toast 本體：深色質感 */
+.toast-box {
+    background-color: rgba(30, 41, 59, 0.95); /* 深藍灰色 (Slate 800) */
+    backdrop-filter: blur(8px); /* 毛玻璃效果 */
+    color: #ffffff;
+    padding: 10px 20px;
+    border-radius: 50px; /* 膠囊形狀 */
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1); /* 增加細微質感 */
+}
+
+/* 針對圖示顏色做區分，底色保持深色 */
+.toast-box.error i {
+    color: #f87171; /* 紅色圖示 */
+}
+.toast-box.success i {
+    color: #4ade80; /* 綠色圖示 */
+}
+
+/* 動畫效果：從下方滑入並淡入 */
+.toast-fade-enter-active, 
+.toast-fade-leave-active {
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toast-fade-enter-from {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.toast-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-10px); /* 消失時往上飄 */
+}

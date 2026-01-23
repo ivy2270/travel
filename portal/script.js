@@ -333,26 +333,76 @@ function startApp(BOOT_CONFIG, tripId) {
                 finally { loading.value = false; }
             };
 
-            const submitForm = async () => {
-                if (uploading.value) return showToast("圖片上傳中...", "error");
-                loading.value = true;
-                try {
-                    let dataToSave = { ...form.value };
-                    const action = isEditing.value ? 'updateData' : 'addData';
-                    const sheet = { itinerary: 'Itinerary', expense: 'Expenses', wish: 'Wishes' }[currentTab.value];
-                    const res = await fetch(GAS_URL, { 
-                        method: 'POST', 
-                        body: JSON.stringify({ action, data: dataToSave, id: form.value.id || null, sheet, key: USER_KEY.value }) 
-                    }).then(r => r.json());
+const submitForm = async () => {
+    if (uploading.value) return showToast("圖片上傳中...", "error");
+    loading.value = true;
+    
+    try {
+        const action = isEditing.value ? 'updateData' : 'addData';
+        const sheet = { itinerary: 'Itinerary', expense: 'Expenses', wish: 'Wishes' }[currentTab.value];
+        
+        // --- 核心邏輯：處理記帳 (匯率計算 + 均分) ---
+        if (currentTab.value === 'expense') {
+            // 1. 計算台幣金額 (TWD)
+            const selectedRate = localRates.value.find(r => r.code === form.value.currency);
+            const rate = selectedRate ? Number(selectedRate.rate) : 1;
+            // 計算並寫入台幣金額（無條件四捨五入到整數，可根據需求調整）
+            form.value.twd = Math.round(form.value.amount * rate);
 
-                    if (res.success) {
-                        showToast(isEditing.value ? "更新成功" : "儲存成功");
+            // 2. 處理均分邏輯 (僅在新增模式下拆分)
+            if (!isEditing.value) {
+                const debtors = (form.value.debtor || "").split(',').filter(x => x);
+                if (debtors.length > 1) {
+                    const splitAmount = Math.round((form.value.amount / debtors.length) * 100) / 100;
+                    const splitTwd = Math.round(form.value.twd / debtors.length);
+                    
+                    const promises = debtors.map(person => {
+                        const splitData = {
+                            ...form.value,
+                            amount: splitAmount,
+                            twd: splitTwd, // 均分後的台幣
+                            debtor: person,
+                            item: `${form.value.item} (${person}均分)`
+                        };
+                        return fetch(GAS_URL, { 
+                            method: 'POST', 
+                            body: JSON.stringify({ action, data: splitData, sheet, key: USER_KEY.value }) 
+                        }).then(r => r.json());
+                    });
+
+                    const results = await Promise.all(promises);
+                    if (results.every(r => r.success)) {
+                        showToast(`已拆分為 ${debtors.length} 筆均分帳目`);
                         showModal.value = false;
                         fetchData();
-                    } else { handleApiError(res); }
-                } catch (e) { showToast("網路連線錯誤", "error"); } 
-                finally { loading.value = false; }
-            };
+                    } else {
+                        showToast("部分帳目儲存失敗", "error");
+                    }
+                    loading.value = false;
+                    return;
+                }
+            }
+        }
+
+        // --- 常規儲存邏輯 (行程、願望、單人記帳或編輯模式) ---
+        const res = await fetch(GAS_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action, data: form.value, id: form.value.id || null, sheet, key: USER_KEY.value }) 
+        }).then(r => r.json());
+
+        if (res.success) {
+            showToast(isEditing.value ? "更新成功" : "儲存成功");
+            showModal.value = false;
+            fetchData();
+        } else { 
+            handleApiError(res); 
+        }
+    } catch (e) { 
+        showToast("網路連線錯誤", "error"); 
+    } finally { 
+        loading.value = false; 
+    }
+};
 
             const prevPhoto = () => {
                 if (zoomScale.value > 1.1 || lightboxUrls.value.length === 0) return;

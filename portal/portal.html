@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>拾光旅圖 | 旅程生成平台</title>
+    <link rel="icon" type="image/svg+xml" href="travel-bag-svgrepo-com.svg">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -79,42 +80,81 @@
         .btn-summer:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
         .btn-summer:active { transform: scale(0.97); }
 
+        .btn-outline {
+            border: 1.5px solid var(--primary);
+            color: var(--primary);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .btn-outline:hover { background-color: var(--accent-soft); }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(6px);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+        .modal-content {
+            background: white;
+            max-width: 650px;
+            width: 100%;
+            max-height: 90vh;
+            border-radius: 2.5rem;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .step-badge {
+            background: var(--primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1.25rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
         @keyframes logo-float-rotate {
             0% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-12px) rotate(12deg); }
             100% { transform: translateY(0) rotate(0deg); }
         }
-        .logo-anim {
-            animation: logo-float-rotate 5s ease-in-out infinite;
+        .logo-anim { animation: logo-float-rotate 5s ease-in-out infinite; }
+        
+        .alert-banner {
+            background: linear-gradient(90deg, #fef3c7 0%, #fffbeb 100%);
+            border-bottom: 1px solid #fde68a;
+            color: #92400e;
         }
-
-        .success-box {
-            background: white;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 1.25rem;
-            overflow: hidden;
-        }
-
-        .link-item {
-            display: flex;
-            align-items: center;
-            padding: 1.2rem;
-            transition: all 0.2s;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .link-item:last-child { border-bottom: none; }
-        .link-item:hover { background-color: #f8fafc; }
     </style>
 </head>
-<body class="flex items-center justify-center py-12 px-4">
+<body class="flex flex-col items-center py-12 px-4">
 
     <div class="app-bg-decoration">
         <div class="bg-circle" style="width: 500px; height: 500px; background: #6d9bc3; top: -150px; left: -100px;"></div>
         <div class="bg-circle" style="width: 400px; height: 400px; background: #f2cc8f; bottom: -50px; right: -50px; opacity: 0.15;"></div>
     </div>
 
-    <div class="max-w-4xl w-full">
+    <div class="max-w-4xl w-full mt-6">
         <div class="text-center mb-10">
             <div class="inline-block mb-6 relative">
                 <img src="https://rainchord.s3.ap-east-2.amazonaws.com/inventory/1768671480240_travel-bag.png" 
@@ -123,6 +163,32 @@
             <h1 class="text-3xl font-black tracking-tight" style="color: var(--primary-dark)">拾光旅圖</h1>
             <p class="text-slate-400 text-sm tracking-[0.2em] font-bold mt-1 uppercase">Travel App Maker</p>
         </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 mb-10 justify-center">
+            <a href="https://docs.google.com/spreadsheets/d/1V3G3gn717jiuza8QvcL1aRRNvp0UFj1UMRVyiQk2JEw/copy" target="_blank" 
+               class="btn-outline px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-3">
+                <i class="fa-solid fa-file-excel"></i>
+                1. 取得試算表複本
+            </a>
+            <div onclick="toggleModal(true)" 
+               class="btn-outline px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-3">
+                <i class="fa-solid fa-desktop"></i>
+                2. 電腦部署教學
+            </div>
+        </div>
+
+
+
+    <div class="mb-8 flex items-center justify-center">
+        <div class="bg-amber-50/80 border border-amber-200/50 px-6 py-3 rounded-2xl flex items-center gap-3 text-amber-700 shadow-sm">
+            <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
+            <span class="text-xs font-bold tracking-wide">
+                初次設定建議使用 <span class="underline decoration-2 underline-offset-2">電腦操作</span>，以確保部署與授權過程順暢。
+            </span>
+        </div>
+    </div>
+
+
 
         <div class="grid md:grid-cols-2 gap-8 items-stretch">
             <div class="glass-card p-8 md:p-10 flex flex-col">
@@ -134,17 +200,33 @@
                 <form id="regForm" class="space-y-4 flex-grow">
                     <div>
                         <label class="app-label">行程識別碼 (ID)</label>
-                        <input type="text" id="trip_id" class="app-input w-full p-4 rounded-2xl font-bold" placeholder="例如: tokyo-trip" required>
+                        <input type="text" id="trip_id" 
+                               class="app-input w-full p-4 rounded-2xl font-bold" 
+                               placeholder="例如: tokyo-trip-2024" 
+                               pattern="[A-Za-z0-9\-_]+" 
+                               title="僅限英文字母、數字、連字號(-)與底線(_)" 
+                               required>
+                        <p class="text-[10px] text-slate-400 mt-1 ml-1 font-bold">* 此 ID 將用於網址，僅限英文數字與 - _</p>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="app-label">您的暱稱</label>
-                            <input type="text" id="nickname" class="app-input w-full p-4 rounded-2xl" placeholder="Jerry" required>
+                    <div>
+                        <label class="app-label">您的暱稱</label>
+                        <input type="text" id="nickname" class="app-input w-full p-4 rounded-2xl font-bold" placeholder="例如：Jerry" required>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="relative">
+                            <label class="app-label">設定平台查詢密碼</label>
+                            <div class="relative">
+                                <input type="password" id="secret_key" class="app-input w-full p-4 rounded-2xl font-bold pr-12" placeholder="未來查詢清單用" required>
+                                <i class="fa-solid fa-eye-slash password-toggle" onclick="togglePassword('secret_key', this)"></i>
+                            </div>
                         </div>
-                        <div>
-                            <label class="app-label">四位金鑰</label>
-                            <input type="password" id="secret_key" class="app-input w-full p-4 rounded-2xl" placeholder="0000" maxlength="4" required>
+                        <div class="flex items-start gap-2 px-1">
+                            <i class="fa-solid fa-circle-info text-blue-400 mt-1 text-xs"></i>
+                            <p class="text-[11px] text-slate-400 font-bold leading-tight">
+                                此密碼用於在本頁面「行程庫管理」查看您所有的行程，將以明文儲存於資料庫，請勿使用重要密碼。
+                            </p>
                         </div>
                     </div>
 
@@ -153,16 +235,32 @@
                         <input type="url" id="gas_url" class="app-input w-full p-4 rounded-2xl text-sm" placeholder="https://script.google.com/..." required>
                     </div>
 
-                    <div class="pb-4">
-                        <label class="app-label">App 預設主題</label>
+                    <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                        <label class="app-label text-blue-600">行程管理金鑰 (Admin Key)</label>
                         <div class="relative">
-                            <select id="theme_id" class="app-input w-full p-4 rounded-2xl appearance-none cursor-pointer bg-white font-bold text-slate-600">
-                                <option value="spring">🌸 春季櫻花</option>
-                                <option value="summer" selected>🌊 夏季海洋</option>
-                                <option value="autumn">🍂 秋季楓紅</option>
-                                <option value="winter">❄️ 冬季雪境</option>
+                            <input type="password" id="admin_key_input" class="app-input w-full p-4 rounded-2xl font-bold pr-12 border-blue-200" placeholder="試算表 SYSTEM 內設定的金鑰" required>
+                            <i class="fa-solid fa-eye-slash password-toggle text-blue-300" onclick="togglePassword('admin_key_input', this)"></i>
+                        </div>
+                        <p class="text-[10px] text-blue-400 mt-2 ml-1 font-bold leading-tight">
+                            <i class="fa-solid fa-shield-halved mr-1"></i>此金鑰僅供本次生成管理連結，系統不會儲存。
+                        </p>
+                    </div>
+
+                    <div class="pb-4">
+                        <div class="flex justify-between items-end mb-1">
+                            <label class="app-label !mb-0">App 套用主題</label>
+                            <button type="button" onclick="previewTheme()" class="text-[10px] font-black text-blue-500 hover:text-blue-700 underline underline-offset-4">
+                                <i class="fa-solid fa-eye mr-1"></i>效果預覽
+                            </button>
+                        </div>
+                        <div class="relative">
+                            <select id="theme_id" class="app-input w-full p-4 rounded-2xl appearance-none cursor-pointer bg-white font-bold text-slate-600 pr-12">
+                                <option value="spring" selected>🌸 春季櫻花 (粉色系)</option>
+                                <option value="summer">🌊 夏季海洋 (藍色系)</option>
+                                <option value="autumn">🍂 秋季楓紅 (橘黃色)</option>
+                                <option value="winter">❄️ 冬季雪境 (灰藍色)</option>
                             </select>
-                            <i class="fa-solid fa-chevron-down absolute right-5 top-5 text-slate-300 pointer-events-none"></i>
+                            <i class="fa-solid fa-chevron-down absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none"></i>
                         </div>
                     </div>
 
@@ -182,12 +280,15 @@
                     </h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="app-label">暱稱</label>
-                            <input type="text" id="q_nickname" class="app-input w-full p-4 rounded-2xl text-sm" placeholder="輸入當初註冊的暱稱">
+                            <label class="app-label">註冊暱稱</label>
+                            <input type="text" id="q_nickname" class="app-input w-full p-4 rounded-2xl text-sm font-bold" placeholder="輸入您的暱稱">
                         </div>
                         <div>
-                            <label class="app-label">金鑰</label>
-                            <input type="password" id="q_key" class="app-input w-full p-4 rounded-2xl text-sm" placeholder="輸入 4 位金鑰">
+                            <label class="app-label">查詢密碼</label>
+                            <div class="relative">
+                                <input type="password" id="q_key" class="app-input w-full p-4 rounded-2xl text-sm font-bold pr-12" placeholder="輸入您的查詢密碼">
+                                <i class="fa-solid fa-eye-slash password-toggle" onclick="togglePassword('q_key', this)"></i>
+                            </div>
                         </div>
                         <button onclick="queryMyTrips()" class="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
                             <i class="fa-solid fa-magnifying-glass"></i>
@@ -195,7 +296,6 @@
                         </button>
                     </div>
                 </div>
-
                 <div id="queryResultsContainer" class="hidden glass-card p-6 flex-grow border-t-4" style="border-top-color: var(--primary)">
                     <div id="queryResults" class="space-y-3"></div>
                 </div>
@@ -203,63 +303,152 @@
         </div>
     </div>
 
+    <div id="guideModal" class="modal-overlay" onclick="toggleModal(false)">
+        <div class="modal-content p-8 md:p-10" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-rocket text-xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-slate-800">三分鐘快速部署教學</h2>
+                </div>
+                <i class="fa-solid fa-circle-xmark text-3xl text-slate-200 cursor-pointer hover:text-red-400 transition-colors" onclick="toggleModal(false)"></i>
+            </div>
+            
+            <div class="space-y-10 text-left">
+                <div class="flex gap-5">
+                    <div class="step-badge">1</div>
+                    <div class="space-y-2">
+                        <h4 class="font-black text-slate-800 text-lg">複製雲端試算表</h4>
+                        <p class="text-sm text-slate-500 leading-relaxed">點擊主頁按鈕開啟範例後，點選 <span class="text-slate-700 font-bold">「建立副本」</span>。這會將表格存入您自己的 Google 雲端硬碟中。</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-5">
+                    <div class="step-badge">2</div>
+                    <div class="space-y-2">
+                        <h4 class="font-black text-slate-800 text-lg">填寫行程基本資料</h4>
+                        <p class="text-sm text-slate-500 leading-relaxed">從雲端硬碟找到試算表開啟後，在試算表最下方的標籤找到 <span class="text-blue-500 font-bold">SYSTEM</span> 分頁，填入您的「行程管理金鑰」、「雲端硬碟資料夾ID」、「行程名稱」等資訊。</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-5">
+                    <div class="step-badge">3</div>
+                    <div class="space-y-3 bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                        <h4 class="font-black text-slate-800 text-lg">完成後端部署與權限設定</h4>
+                        <div class="space-y-4">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
+                                <p class="text-sm text-slate-600">點擊選單 <span class="font-bold">「擴充功能 (Extensions)」 > 「Apps Script」</span>。</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
+                                <p class="text-sm text-slate-600">點擊右上角 <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs">部署 (Deploy)</span> > <span class="font-bold">「新部署 (New deployment)」</span>。</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
+                                <p class="text-sm text-slate-600">將「誰有權限存取」改為 <span class="text-red-500 font-black">「所有人 (Anyone)」</span>，並完成授權與勾選「全選」權限。</p>
+                            </div>
+                            <div class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-xl space-y-2">
+                                <p class="text-xs font-bold text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 為什麼要用電腦？</p>
+                                <p class="text-[12px] text-slate-600 leading-relaxed">手機瀏覽器常會阻擋授權視窗，且無法精確選取最終生成的 URL。強烈建議此步驟使用電腦操作。</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
+                                <p class="text-sm text-slate-600">複製最後出現的 <span class="underline decoration-blue-300 font-bold">網頁應用程式網址 (Web App URL)</span>。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-5">
+                    <div class="step-badge">4</div>
+                    <div class="space-y-2">
+                        <h4 class="font-black text-slate-800 text-lg">貼回網址，完成！</h4>
+                        <p class="text-sm text-slate-500 leading-relaxed">回到此頁面，將網址貼入「GAS 部署網址」欄位，設定您的 ID 與密碼後，點擊生成按鈕即可擁有專屬 App！</p>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="toggleModal(false)" class="btn-summer w-full mt-12 py-5 rounded-3xl font-black text-lg text-white">
+                我準備好了，開始操作！
+            </button>
+        </div>
+    </div>
+
     <script>
-        const CATALOG_GAS_URL = "https://script.google.com/macros/s/AKfycbxA8phevTocRDd0WlcguLa4JIwgYbJnILJF97ZTCAgDeUhC2FUtJ2KWzpRaZnDA0efSMA/exec";
+        const CATALOG_GAS_URL = "https://script.google.com/macros/s/AKfycbyXuNeKrvQdjMxvSRj2eIAwl-gpcbECJFyUPmevX523TFo_peCIEriAxrLjg-5gBqgZ/exec";
+
+        function toggleModal(show) {
+            document.getElementById('guideModal').style.display = show ? 'flex' : 'none';
+            document.body.style.overflow = show ? 'hidden' : 'auto';
+        }
+
+        function togglePassword(inputId, el) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                el.classList.replace('fa-eye-slash', 'fa-eye');
+            } else {
+                input.type = 'password';
+                el.classList.replace('fa-eye', 'fa-eye-slash');
+            }
+        }
+
+        // 主題預覽功能：導向範例網站
+        function previewTheme() {
+            const theme = document.getElementById('theme_id').value;
+            // 這裡請替換成你的「範例行程 ID」（例如 demo-trip）
+            const demoTripId = "demo-trip"; 
+            window.open(`index.html?trip=${demoTripId}&preview_theme=${theme}`, "_blank");
+        }
 
         document.getElementById('regForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = e.target.querySelector('button');
             const msgDiv = document.getElementById('regMsg');
-            const key = document.getElementById('secret_key').value;
+            const tripId = document.getElementById('trip_id').value;
+            const secretKey = document.getElementById('secret_key').value;
+            const adminKey = document.getElementById('admin_key_input').value;
+
             btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 正在通訊中...';
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 建立中...';
 
             const payload = {
-                trip_id: document.getElementById('trip_id').value,
+                trip_id: tripId,
                 nickname: document.getElementById('nickname').value,
-                secret_key: key,
+                secret_key: secretKey,
                 gas_url: document.getElementById('gas_url').value,
                 theme_id: document.getElementById('theme_id').value,
-                display_name: document.getElementById('trip_id').value
+                display_name: tripId
             };
 
             try {
                 const response = await fetch(CATALOG_GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
                 const result = await response.json();
+                
                 if (result.success) {
                     msgDiv.innerHTML = `
-                        <div class="mt-4">
-                            <p class="text-slate-800 font-black text-lg mb-4 flex items-center">
-                                <i class="fa-solid fa-circle-check text-green-500 mr-2"></i> 行程建立完畢！
+                        <div class="mt-4 p-5 bg-white border border-slate-100 rounded-3xl shadow-xl animate-in fade-in duration-500">
+                            <p class="text-slate-800 font-black mb-4 flex items-center">
+                                <i class="fa-solid fa-circle-check text-green-500 mr-2 text-xl"></i> 行程建立完成！
                             </p>
-                            <div class="success-box shadow-lg">
-                                <a href="index.html?trip=${payload.trip_id}" target="_blank" class="link-item">
-                                    <div class="w-12 h-12 bg-blue-50 text-[#6d9bc3] rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-                                        <i class="fa-solid fa-paper-plane text-lg"></i>
-                                    </div>
-                                    <div class="flex-grow">
-                                        <div class="text-[15px] font-black text-slate-700">訪客版</div>
-                                        <div class="text-xs text-slate-400 font-bold">分享給旅伴查看</div>
-                                    </div>
-                                    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                            <div class="flex flex-col gap-3">
+                                <a href="index.html?trip=${payload.trip_id}" target="_blank" class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center hover:bg-blue-50 transition-all group font-black text-slate-600 text-sm">
+                                    <span>開啟訪客版 (分享用)</span>
+                                    <i class="fa-solid fa-paper-plane group-hover:translate-x-1 transition-transform"></i>
                                 </a>
-                                <a href="index.html?trip=${payload.trip_id}&key=${key}" target="_blank" class="link-item bg-slate-50">
-                                    <div class="w-12 h-12 bg-[#5a82a5] text-white rounded-full flex items-center justify-center mr-4 flex-shrink-0">
-                                        <i class="fa-solid fa-lock text-lg"></i>
-                                    </div>
-                                    <div class="flex-grow">
-                                        <div class="text-[15px] font-black text-slate-700">管理版</div>
-                                        <div class="text-xs text-[#5a82a5] font-bold">管理行程與權限</div>
-                                    </div>
-                                    <i class="fa-solid fa-chevron-right text-slate-400"></i>
+                                <a href="index.html?trip=${payload.trip_id}&key=${adminKey}" target="_blank" class="p-4 bg-[#6d9bc3] text-white rounded-2xl flex justify-between items-center shadow-lg hover:brightness-105 transition-all font-black text-sm">
+                                    <span>開啟管理版 (私人用)</span>
+                                    <i class="fa-solid fa-lock"></i>
                                 </a>
                             </div>
                         </div>`;
                 } else {
-                    msgDiv.innerHTML = `<div class="p-4 bg-red-50 text-red-500 rounded-2xl text-sm font-bold">${result.message}</div>`;
+                    msgDiv.innerHTML = `<div class="p-4 bg-red-50 text-red-500 rounded-2xl text-sm font-bold border border-red-100">${result.message}</div>`;
                 }
             } catch (err) {
-                msgDiv.innerHTML = `<div class="p-4 bg-red-50 text-red-500 rounded-2xl text-sm font-bold text-center">系統連線失敗</div>`;
+                msgDiv.innerHTML = `<div class="p-4 bg-red-50 text-red-500 rounded-2xl text-sm font-bold text-center border border-red-100">系統連線失敗，請檢查網址</div>`;
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<span>生成我的旅圖</span> <i class="fa-solid fa-wand-magic-sparkles"></i>';
@@ -272,35 +461,35 @@
             const resDiv = document.getElementById('queryResults');
             const container = document.getElementById('queryResultsContainer');
             if (!user || !key) return;
+            
             container.classList.remove('hidden');
-            resDiv.innerHTML = '<div class="text-center p-6"><i class="fa-solid fa-circle-notch fa-spin text-blue-200 text-2xl"></i></div>';
+            resDiv.innerHTML = '<div class="text-center p-6"><i class="fa-solid fa-circle-notch fa-spin text-[#6d9bc3] text-2xl"></i></div>';
+            
             try {
                 const res = await fetch(`${CATALOG_GAS_URL}?action=listMyTrips&user=${user}&key=${key}`);
                 const data = await res.json();
+                
                 if (data.success && data.trips.length > 0) {
-                    let html = `<div class="text-sm font-black text-slate-400 mb-4 tracking-widest text-center uppercase">您的專屬行程庫</div>`;
+                    let html = `<div class="text-xs font-black text-slate-300 mb-4 tracking-widest text-center uppercase">您的行程庫</div>`;
                     data.trips.forEach(item => {
                         html += `
-                            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                                <div class="font-black text-slate-700 text-lg mb-3 truncate flex items-center">
-                                    <i class="fa-solid fa-map-location-dot mr-2 text-slate-300 text-sm"></i>
-                                    ${item.display_name}
+                            <div class="bg-white p-5 rounded-2xl border border-slate-50 shadow-sm mb-3 text-sm">
+                                <div class="font-black text-slate-700 mb-3 truncate flex items-center">
+                                    <i class="fa-solid fa-map-location-dot mr-2 text-slate-200"></i>${item.display_name}
                                 </div>
-                                <div class="flex gap-3">
-                                    <a href="index.html?trip=${item.trip_id}" target="_blank" class="flex-grow py-3 text-xs font-black bg-slate-50 text-slate-500 rounded-xl text-center hover:bg-blue-50 hover:text-[#6d9bc3] transition-all border border-slate-50 flex items-center justify-center gap-2">
-                                        <i class="fa-solid fa-paper-plane"></i> 訪客版
-                                    </a>
-                                    <a href="index.html?trip=${item.trip_id}&key=${key}" target="_blank" class="flex-grow py-3 text-xs font-black bg-[#5a82a5] text-white rounded-xl text-center hover:bg-[#4a6d8a] transition-all flex items-center justify-center gap-2 shadow-sm">
-                                        <i class="fa-solid fa-lock"></i> 管理版
-                                    </a>
+                                <div class="flex gap-2">
+                                    <a href="index.html?trip=${item.trip_id}" target="_blank" class="flex-grow py-3 text-[10px] font-black bg-slate-50 text-slate-400 rounded-xl text-center hover:bg-blue-50 transition-colors">訪客版</a>
+                                    <a href="index.html?trip=${item.trip_id}&key=${item.admin_key}" target="_blank" class="flex-grow py-3 text-[10px] font-black bg-[#6d9bc3] text-white rounded-xl text-center shadow-sm">管理版</a>
                                 </div>
                             </div>`;
                     });
                     resDiv.innerHTML = html;
                 } else {
-                    resDiv.innerHTML = `<div class="text-center p-8 text-slate-400 font-bold italic">查無行程紀錄</div>`;
+                    resDiv.innerHTML = `<div class="text-center p-8 text-slate-400 font-bold italic">查無紀錄，請檢查暱稱與密碼</div>`;
                 }
-            } catch (err) { resDiv.innerHTML = `<div class="text-red-400 p-4 text-center">連線異常</div>`; }
+            } catch (err) { 
+                resDiv.innerHTML = `<div class="text-red-400 p-4 text-center">連線異常</div>`; 
+            }
         }
     </script>
 </body>

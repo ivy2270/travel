@@ -1,16 +1,19 @@
 const { createApp, ref, computed, onMounted, watch } = Vue;
 
-const CATALOG_SERVICE_URL = "https://script.google.com/macros/s/AKfycbxA8phevTocRDd0WlcguLa4JIwgYbJnILJF97ZTCAgDeUhC2FUtJ2KWzpRaZnDA0efSMA/exec";
+const CATALOG_SERVICE_URL = "https://script.google.com/macros/s/AKfycbyXuNeKrvQdjMxvSRj2eIAwl-gpcbECJFyUPmevX523TFo_peCIEriAxrLjg-5gBqgZ/exec";
 
 async function initPlatform() {
     const urlParams = new URLSearchParams(window.location.search);
     const tripId = urlParams.get('trip');
+    // 1. 抓取預覽參數
+    const previewTheme = urlParams.get('preview_theme'); 
 
     if (!tripId) {
         showErrorPage("請提供行程 ID");
         return;
     }
 
+    // 初始載入動畫時的預設色
     updatePwaManifest("載入中...", tripId, "", 'spring');
 
     try {
@@ -20,6 +23,9 @@ async function initPlatform() {
             showErrorPage(`找不到行程: ${tripId}`);
             return;
         }
+
+        // 2. 決定最終要顯示的主題 (網址參數優先於資料庫設定)
+        const finalTheme = previewTheme || res.theme_id || 'spring';
 
         const keyFromUrl = urlParams.get('key');
         if (keyFromUrl !== null) {
@@ -33,16 +39,24 @@ async function initPlatform() {
         }
 
         const currentKey = localStorage.getItem(`key_${tripId}`) || "";
-        updatePwaManifest(res.display_name || "拾光旅圖", tripId, currentKey, res.theme_id || 'spring');
-        startApp(res, tripId);
+
+        // 3. 套用決定後的主題
+        updatePwaManifest(res.display_name || "拾光旅圖", tripId, currentKey, finalTheme);
+        
+        // 注意：這裡將 finalTheme 傳入 startApp，確保介面渲染時使用正確顏色
+        // 需確認你的 startApp 函式定義是否支援接收 theme 參數
+        startApp(res, tripId, finalTheme); 
 
     } catch (err) {
         showErrorPage("總機連線失敗");
     }
 }
 
-function startApp(BOOT_CONFIG, tripId) {
-    const theme = BOOT_CONFIG.theme_id || 'spring';
+function startApp(BOOT_CONFIG, tripId, themeOverride) {
+    
+    // 2. 優先使用傳入的 themeOverride，沒有才用資料庫的
+    const theme = themeOverride || BOOT_CONFIG.theme_id || 'spring'; 
+    
     document.documentElement.setAttribute('data-theme', theme);
     document.title = BOOT_CONFIG.display_name;
 

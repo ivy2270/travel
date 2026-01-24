@@ -139,12 +139,6 @@
             100% { transform: translateY(0) rotate(0deg); }
         }
         .logo-anim { animation: logo-float-rotate 5s ease-in-out infinite; }
-        
-        .alert-banner {
-            background: linear-gradient(90deg, #fef3c7 0%, #fffbeb 100%);
-            border-bottom: 1px solid #fde68a;
-            color: #92400e;
-        }
     </style>
 </head>
 <body class="flex flex-col items-center py-12 px-4">
@@ -175,20 +169,21 @@
                 <i class="fa-solid fa-desktop"></i>
                 2. 電腦部署教學
             </div>
+            <div onclick="toggleMobileModal(true)" 
+               class="btn-outline px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-3 border-amber-400 text-amber-600">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+                2. 手機部署教學
+            </div>
         </div>
 
-
-
-    <div class="mb-8 flex items-center justify-center">
-        <div class="bg-amber-50/80 border border-amber-200/50 px-6 py-3 rounded-2xl flex items-center gap-3 text-amber-700 shadow-sm">
-            <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
-            <span class="text-xs font-bold tracking-wide">
-                初次設定建議使用 <span class="underline decoration-2 underline-offset-2">電腦操作</span>，以確保部署與授權過程順暢。
-            </span>
+        <div class="mb-8 flex items-center justify-center text-center">
+            <div class="bg-amber-50/80 border border-amber-200/50 px-6 py-3 rounded-2xl flex items-center gap-3 text-amber-700 shadow-sm">
+                <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
+                <span class="text-xs font-bold tracking-wide">
+                    初次設定建議使用 <span class="underline decoration-2 underline-offset-2">電腦操作</span>，手機用戶請參考專屬教學。
+                </span>
+            </div>
         </div>
-    </div>
-
-
 
         <div class="grid md:grid-cols-2 gap-8 items-stretch">
             <div class="glass-card p-8 md:p-10 flex flex-col">
@@ -222,12 +217,6 @@
                                 <i class="fa-solid fa-eye-slash password-toggle" onclick="togglePassword('secret_key', this)"></i>
                             </div>
                         </div>
-                        <div class="flex items-start gap-2 px-1">
-                            <i class="fa-solid fa-circle-info text-blue-400 mt-1 text-xs"></i>
-                            <p class="text-[11px] text-slate-400 font-bold leading-tight">
-                                此密碼用於在本頁面「行程庫管理」查看您所有的行程，將以明文儲存於資料庫，請勿使用重要密碼。
-                            </p>
-                        </div>
                     </div>
 
                     <div>
@@ -241,9 +230,6 @@
                             <input type="password" id="admin_key_input" class="app-input w-full p-4 rounded-2xl font-bold pr-12 border-blue-200" placeholder="試算表 SYSTEM 內設定的金鑰" required>
                             <i class="fa-solid fa-eye-slash password-toggle text-blue-300" onclick="togglePassword('admin_key_input', this)"></i>
                         </div>
-                        <p class="text-[10px] text-blue-400 mt-2 ml-1 font-bold leading-tight">
-                            <i class="fa-solid fa-shield-halved mr-1"></i>此金鑰僅供本次生成管理連結，系統不會儲存。
-                        </p>
                     </div>
 
                     <div class="pb-4">
@@ -308,70 +294,92 @@
             <div class="flex justify-between items-center mb-8">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-rocket text-xl"></i>
+                        <i class="fa-solid fa-desktop text-xl"></i>
                     </div>
-                    <h2 class="text-2xl font-black text-slate-800">三分鐘快速部署教學</h2>
+                    <h2 class="text-2xl font-black text-slate-800">電腦版部署教學</h2>
                 </div>
                 <i class="fa-solid fa-circle-xmark text-3xl text-slate-200 cursor-pointer hover:text-red-400 transition-colors" onclick="toggleModal(false)"></i>
             </div>
             
-            <div class="space-y-10 text-left">
-                <div class="flex gap-5">
-                    <div class="step-badge">1</div>
-                    <div class="space-y-2">
-                        <h4 class="font-black text-slate-800 text-lg">複製雲端試算表</h4>
-                        <p class="text-sm text-slate-500 leading-relaxed">點擊主頁按鈕開啟範例後，點選 <span class="text-slate-700 font-bold">「建立副本」</span>。這會將表格存入您自己的 Google 雲端硬碟中。</p>
+            <div class="space-y-6 text-left text-sm text-slate-600">
+                <p>1. 點選「建立副本」存入雲端硬碟。</p>
+                <p>2. 開啟試算表，於 <span class="font-bold text-blue-500">SYSTEM</span> 填寫金鑰與設定。</p>
+                <p>3. 點選 <span class="font-bold">擴充功能 > Apps Script</span>。</p>
+                <p>4. 點選右上角 <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs">部署</span> > 新部署，對象選「所有人」。</p>
+                <p>5. 完成授權並複製 Web App 網址貼回本頁。</p>
+            </div>
+
+            <button onclick="toggleModal(false)" class="btn-summer w-full mt-10 py-5 rounded-3xl font-black text-lg text-white">
+                我準備好了
+            </button>
+        </div>
+    </div>
+
+    <div id="mobileGuideModal" class="modal-overlay" onclick="toggleMobileModal(false)">
+        <div class="modal-content p-8 md:p-10" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-mobile-screen text-xl"></i>
+                    </div>
+                    <h2 class="text-2xl font-black text-slate-800">手機部署教學</h2>
+                </div>
+                <i class="fa-solid fa-circle-xmark text-3xl text-slate-200 cursor-pointer hover:text-red-400 transition-colors" onclick="toggleMobileModal(false)"></i>
+            </div>
+
+            <a href="https://youtu.be/12X7SDGESgw" target="_blank" class="mb-8 block w-full bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 flex items-center justify-center gap-3 hover:bg-red-100 transition-all">
+                <i class="fa-brands fa-youtube text-2xl"></i>
+                <span class="font-black">點我觀看手機操作示範影片</span>
+            </a>
+            
+            <div class="space-y-8 text-left">
+                <div class="flex gap-4">
+                    <div class="step-badge bg-amber-500 text-white">1</div>
+                    <div>
+                        <h4 class="font-black text-slate-800">複製副本與切換模式</h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            點擊「取得副本」後，請點瀏覽器選單並勾選 <span class="text-red-500 font-bold">「要求電腦版網站」</span>。這非常重要，否則無法進入 Script 編輯器。
+                        </p>
                     </div>
                 </div>
 
-                <div class="flex gap-5">
-                    <div class="step-badge">2</div>
-                    <div class="space-y-2">
-                        <h4 class="font-black text-slate-800 text-lg">填寫行程基本資料</h4>
-                        <p class="text-sm text-slate-500 leading-relaxed">從雲端硬碟找到試算表開啟後，在試算表最下方的標籤找到 <span class="text-blue-500 font-bold">SYSTEM</span> 分頁，填入您的「行程管理金鑰」、「雲端硬碟資料夾ID」、「行程名稱」等資訊。</p>
-                    </div>
-                </div>
-
-                <div class="flex gap-5">
-                    <div class="step-badge">3</div>
-                    <div class="space-y-3 bg-slate-50 p-5 rounded-3xl border border-slate-100">
-                        <h4 class="font-black text-slate-800 text-lg">完成後端部署與權限設定</h4>
-                        <div class="space-y-4">
-                            <div class="flex items-start gap-2">
-                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
-                                <p class="text-sm text-slate-600">點擊選單 <span class="font-bold">「擴充功能 (Extensions)」 > 「Apps Script」</span>。</p>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
-                                <p class="text-sm text-slate-600">點擊右上角 <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs">部署 (Deploy)</span> > <span class="font-bold">「新部署 (New deployment)」</span>。</p>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
-                                <p class="text-sm text-slate-600">將「誰有權限存取」改為 <span class="text-red-500 font-black">「所有人 (Anyone)」</span>，並完成授權與勾選「全選」權限。</p>
-                            </div>
-                            <div class="bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-xl space-y-2">
-                                <p class="text-xs font-bold text-amber-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i> 為什麼要用電腦？</p>
-                                <p class="text-[12px] text-slate-600 leading-relaxed">手機瀏覽器常會阻擋授權視窗，且無法精確選取最終生成的 URL。強烈建議此步驟使用電腦操作。</p>
-                            </div>
-                            <div class="flex items-start gap-2">
-                                <i class="fa-solid fa-caret-right text-blue-500 mt-1"></i>
-                                <p class="text-sm text-slate-600">複製最後出現的 <span class="underline decoration-blue-300 font-bold">網頁應用程式網址 (Web App URL)</span>。</p>
-                            </div>
+                <div class="flex gap-4">
+                    <div class="step-badge bg-amber-500">2</div>
+                    <div>
+                        <h4 class="font-black text-slate-800">執行初始化腳本</h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            進入 <span class="font-bold">擴充功能 > Apps Script</span>，在左側選單點擊 <span class="text-blue-500 font-bold">setup.gs</span>。點擊上方的 <span class="font-bold">「執行」</span>。
+                        </p>
+                        <div class="mt-2 bg-slate-50 p-3 rounded-xl border border-slate-100 text-[11px] text-slate-600">
+                            <i class="fa-solid fa-shield-check mr-1"></i> <strong>授權流程：</strong> 審查權限 > 選帳號 > 進階 > 前往 (不安全) > 全選權限 > 允許。
                         </div>
                     </div>
                 </div>
 
-                <div class="flex gap-5">
-                    <div class="step-badge">4</div>
-                    <div class="space-y-2">
-                        <h4 class="font-black text-slate-800 text-lg">貼回網址，完成！</h4>
-                        <p class="text-sm text-slate-500 leading-relaxed">回到此頁面，將網址貼入「GAS 部署網址」欄位，設定您的 ID 與密碼後，點擊生成按鈕即可擁有專屬 App！</p>
+                <div class="flex gap-4">
+                    <div class="step-badge bg-amber-500 text-white">3</div>
+                    <div>
+                        <h4 class="font-black text-slate-800">正式部署網址</h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            點選右上角 <span class="bg-blue-600 text-white px-1.5 py-0.5 rounded text-[10px]">部署</span> > <span class="font-bold">新部署</span>。
+                            設定「誰有權限存取」為 <span class="font-bold text-red-500">「所有人」</span>。最後再次完成授權並複製生成的網址。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="step-badge bg-amber-500 text-white">4</div>
+                    <div>
+                        <h4 class="font-black text-slate-800">填寫資料夾 ID</h4>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            回到試算表的 <span class="font-bold text-blue-500">System</span> 分頁，確認金鑰與腳本自動產生的資料夾 ID 是否正確，再回本頁提交。
+                        </p>
                     </div>
                 </div>
             </div>
 
-            <button onclick="toggleModal(false)" class="btn-summer w-full mt-12 py-5 rounded-3xl font-black text-lg text-white">
-                我準備好了，開始操作！
+            <button onclick="toggleMobileModal(false)" class="btn-summer w-full mt-10 py-5 rounded-3xl font-black text-lg text-white">
+                我明白了，開始挑戰
             </button>
         </div>
     </div>
@@ -381,6 +389,12 @@
 
         function toggleModal(show) {
             document.getElementById('guideModal').style.display = show ? 'flex' : 'none';
+            document.body.style.overflow = show ? 'hidden' : 'auto';
+        }
+
+        // 新增：手機教學開關
+        function toggleMobileModal(show) {
+            document.getElementById('mobileGuideModal').style.display = show ? 'flex' : 'none';
             document.body.style.overflow = show ? 'hidden' : 'auto';
         }
 
@@ -395,10 +409,8 @@
             }
         }
 
-        // 主題預覽功能：導向範例網站
         function previewTheme() {
             const theme = document.getElementById('theme_id').value;
-            // 這裡請替換成你的「範例行程 ID」（例如 demo-trip）
             const demoTripId = "demo-trip"; 
             window.open(`index.html?trip=${demoTripId}&preview_theme=${theme}`, "_blank");
         }
@@ -494,4 +506,3 @@
     </script>
 </body>
 </html>
-

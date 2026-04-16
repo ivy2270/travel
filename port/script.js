@@ -7,44 +7,40 @@ async function initPlatform() {
     const tripIdFromUrl = urlParams.get('trip');
     const keyFromUrl = urlParams.get('key');
     
-    // 取得最後一次停留的行程 ID 與該行程的 Key
+    // 取得最後一次停留的行程 ID
     const lastTripId = localStorage.getItem('last_active_trip');
-    const savedKeyForLastTrip = lastTripId ? (localStorage.getItem(`key_${lastTripId}`) || "") : "";
+    
+    // 【核心邏輯】解決 PWA 固定的 start_url 問題
+    // 判斷這是不是一次「沒有帶鑰匙」的普通啟動（通常就是點 PWA 圖示）
+    const isOrdinaryLaunch = !keyFromUrl;
 
-    // --- 強勢記憶導向邏輯 ---
-    // 只要滿足以下其中一個條件，就強制跳轉到「上次行程」：
-    // 1. 完全沒參數 (純 index.html)
-    // 2. 網址參數跟上次紀錄不同，且這不是一個「帶有管理鑰匙」的強制開啟連結
-    if (lastTripId && tripIdFromUrl !== lastTripId && !keyFromUrl) {
-        const redirectUrl = `index.html?trip=${lastTripId}${savedKeyForLastTrip ? '&key=' + savedKeyForLastTrip : ''}`;
+    if (isOrdinaryLaunch && lastTripId && tripIdFromUrl !== lastTripId) {
+        // 如果上次看到的跟網址帶的不同，且這只是普通開啟（沒帶 Key）
+        // 代表 PWA 的 start_url 在作怪，我們強行把它 replace 掉
+        const savedKeyForLast = localStorage.getItem(`key_${lastTripId}`) || "";
+        const redirectUrl = `index.html?trip=${lastTripId}${savedKeyForLast ? '&key=' + savedKeyForLast : ''}`;
+        
+        // 這是最重要的一步：奪回網址控制權
         window.location.replace(redirectUrl);
         return; 
     }
 
-    // --- 進入當前行程的標準流程 ---
-    // 如果連紀錄都沒有，也沒參數，才報錯
-    if (!tripIdFromUrl && !lastTripId) {
+    // --- 剩下的載入流程 ---
+    // 確定要使用的 ID（這時不管是網址帶的，還是跳轉後的，都會一致）
+    const activeTripId = tripIdFromUrl || lastTripId;
+
+    if (!activeTripId) {
         showErrorPage("請提供行程 ID");
         return;
     }
 
-    // 確定要載入的 ID (這時 tripIdFromUrl 一定有值，或者是上面已經跳轉了)
-    const activeTripId = tripIdFromUrl;
-
-    // 更新權限：最高準則依舊是網址
-    if (keyFromUrl && keyFromUrl.trim() !== "") {
+    // 更新權限與記憶
+    if (keyFromUrl) {
         localStorage.setItem(`key_${activeTripId}`, keyFromUrl);
-    } else if (keyFromUrl === "") {
-        // 明確帶了空的 key= 才清除
-        localStorage.removeItem(`key_${activeTripId}`);
     }
-
-    // 確定進入，更新記憶點
     localStorage.setItem('last_active_trip', activeTripId);
     
     const currentKey = localStorage.getItem(`key_${activeTripId}`) || "";
-
-    // 更新 Manifest 與載入資料
     updatePwaManifest("拾光旅圖", activeTripId, currentKey, 'spring');
 
     try {

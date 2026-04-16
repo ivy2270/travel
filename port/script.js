@@ -4,57 +4,58 @@ const CATALOG_SERVICE_URL = "https://script.google.com/macros/s/AKfycbyXuNeKrvQd
 
 async function initPlatform() {
     const urlParams = new URLSearchParams(window.location.search);
-    const tripId = urlParams.get('trip');
+    const tripIdFromUrl = urlParams.get('trip');
     const keyFromUrl = urlParams.get('key');
     
-    // 從本地抓取上一次成功載入的行程
+    // 取得最後一次停留的行程 ID 與該行程的 Key
     const lastTripId = localStorage.getItem('last_active_trip');
+    const savedKeyForLastTrip = lastTripId ? (localStorage.getItem(`key_${lastTripId}`) || "") : "";
 
-    // --- 1. PWA 啟動與強制導向邏輯 ---
-    // 判斷條件：
-    // 如果網址完全沒 tripId (純 index.html 開啟)
-    // 或者 網址的 tripId 與上次紀錄不符 (代表是點擊了寫死網址的 PWA 圖示啟動)
-    // 且 網址沒有帶 KEY (因為帶 KEY 通常是點了特定連結，那種情況我們聽網址的)
-    if (!keyFromUrl && lastTripId && tripId !== lastTripId) {
-        // 如果網址有帶其他 tripId，先檢查是不是因為 PWA start_url 造成的
-        // 我們優先跳轉到使用者最後看到的行程
-        const savedKey = localStorage.getItem(`key_${lastTripId}`) || "";
-        window.location.replace(`index.html?trip=${lastTripId}${savedKey ? '&key='+savedKey : ''}`);
-        return;
+    // --- 強勢記憶導向邏輯 ---
+    // 只要滿足以下其中一個條件，就強制跳轉到「上次行程」：
+    // 1. 完全沒參數 (純 index.html)
+    // 2. 網址參數跟上次紀錄不同，且這不是一個「帶有管理鑰匙」的強制開啟連結
+    if (lastTripId && tripIdFromUrl !== lastTripId && !keyFromUrl) {
+        const redirectUrl = `index.html?trip=${lastTripId}${savedKeyForLastTrip ? '&key=' + savedKeyForLastTrip : ''}`;
+        window.location.replace(redirectUrl);
+        return; 
     }
 
-    // 如果連 lastTripId 都沒有，且網址也沒 tripId，才報錯
-    if (!tripId && !lastTripId) {
+    // --- 進入當前行程的標準流程 ---
+    // 如果連紀錄都沒有，也沒參數，才報錯
+    if (!tripIdFromUrl && !lastTripId) {
         showErrorPage("請提供行程 ID");
         return;
     }
 
-    // --- 2. 最高準則：更新紀錄與權限 ---
-    // 這裡我們維持你原本的邏輯：只要網址有帶 KEY 就更新，沒帶就清空
+    // 確定要載入的 ID (這時 tripIdFromUrl 一定有值，或者是上面已經跳轉了)
+    const activeTripId = tripIdFromUrl;
+
+    // 更新權限：最高準則依舊是網址
     if (keyFromUrl && keyFromUrl.trim() !== "") {
-        localStorage.setItem(`key_${tripId}`, keyFromUrl);
-    } else {
-        // 如果是從 PWA 跳轉過來的，上面那段 replace 已經帶了 key，所以這裡不會誤刪
-        localStorage.removeItem(`key_${tripId}`);
+        localStorage.setItem(`key_${activeTripId}`, keyFromUrl);
+    } else if (keyFromUrl === "") {
+        // 明確帶了空的 key= 才清除
+        localStorage.removeItem(`key_${activeTripId}`);
     }
 
-    // 確定進入該行程，更新最後活動紀錄
-    localStorage.setItem('last_active_trip', tripId);
+    // 確定進入，更新記憶點
+    localStorage.setItem('last_active_trip', activeTripId);
     
-    const currentKey = localStorage.getItem(`key_${tripId}`) || "";
+    const currentKey = localStorage.getItem(`key_${activeTripId}`) || "";
 
-    // --- 3. 執行後續載入 ---
-    updatePwaManifest("拾光旅圖", tripId, currentKey, 'spring');
+    // 更新 Manifest 與載入資料
+    updatePwaManifest("拾光旅圖", activeTripId, currentKey, 'spring');
 
     try {
-        const res = await fetch(`${CATALOG_SERVICE_URL}?trip=${tripId}`).then(r => r.json());
+        const res = await fetch(`${CATALOG_SERVICE_URL}?trip=${activeTripId}`).then(r => r.json());
         if (res.error) {
-            showErrorPage(`找不到行程: ${tripId}`);
+            showErrorPage(`找不到行程: ${activeTripId}`);
             return;
         }
         const finalTheme = res.theme_id || 'spring';
-        updatePwaManifest("拾光旅圖", tripId, currentKey, finalTheme);
-        startApp(res, tripId, finalTheme); 
+        updatePwaManifest("拾光旅圖", activeTripId, currentKey, finalTheme);
+        startApp(res, activeTripId, finalTheme); 
     } catch (err) {
         showErrorPage("連線錯誤");
     }

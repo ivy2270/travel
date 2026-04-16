@@ -713,14 +713,27 @@ function showErrorPage(msg) {
 
 function updatePwaManifest(name, tripId, key, themeId) {
     const link = document.getElementById('manifest-link');
+    const meta = document.getElementById('theme-meta'); // 取得 Meta 標籤
     if (!link) return;
     
-    const themeColors = { 'spring': '#e7a8a8', 'summer': '#6d9bc3', 'autumn': '#d9a05b', 'winter': '#8da9c4' };
+    // 主題色碼表
+    const themeColors = { 
+        'spring': '#e7a8a8', 
+        'summer': '#6d9bc3', 
+        'autumn': '#d9a05b', 
+        'winter': '#8da9c4' 
+    };
     const activeColor = themeColors[themeId] || '#e7a8a8';
 
+    // 1. 即時更新瀏覽器/PWA 視窗上方的顏色
+    if (meta) {
+        meta.setAttribute('content', activeColor);
+    }
+
+    // 2. 更新 Manifest (這影響啟動畫面與系統記錄)
     const manifest = {
-        "name": "拾光旅圖",        // 強制固定名稱
-        "short_name": "拾光旅圖",  // 強制固定名稱
+        "name": "拾光旅圖",
+        "short_name": "拾光旅圖",
         "start_url": `index.html?trip=${tripId}${key ? '&key='+key : ''}`,
         "display": "standalone",
         "theme_color": activeColor,

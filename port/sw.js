@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-pro-v6'; // 更新版本號
+const CACHE_NAME = 'travel-pro-v7'; // 更新版本號
 const ASSETS = [
   './',
   './index.html',

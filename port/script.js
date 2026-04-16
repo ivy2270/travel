@@ -7,37 +7,46 @@ async function initPlatform() {
     const tripIdFromUrl = urlParams.get('trip');
     const keyFromUrl = urlParams.get('key');
     
-    // 取得最後一次停留的行程 ID
+    // 取得最後一次停留的紀錄
     const lastTripId = localStorage.getItem('last_active_trip');
     
-    // 【核心邏輯】解決 PWA 固定的 start_url 問題
-    // 判斷這是不是一次「沒有帶鑰匙」的普通啟動（通常就是點 PWA 圖示）
-    const isOrdinaryLaunch = !keyFromUrl;
+    // --- 關鍵修改：利用 sessionStorage 判斷是否為「全新啟動」 ---
+    // sessionStorage 在 App 完全關閉後會清空，但在 App 運行期間（含重新整理）會保留
+    const isAppJustStarted = !sessionStorage.getItem('session_initialized');
 
-    if (isOrdinaryLaunch && lastTripId && tripIdFromUrl !== lastTripId) {
-        // 如果上次看到的跟網址帶的不同，且這只是普通開啟（沒帶 Key）
-        // 代表 PWA 的 start_url 在作怪，我們強行把它 replace 掉
-        const savedKeyForLast = localStorage.getItem(`key_${lastTripId}`) || "";
-        const redirectUrl = `index.html?trip=${lastTripId}${savedKeyForLast ? '&key=' + savedKeyForLast : ''}`;
+    if (isAppJustStarted && lastTripId && tripIdFromUrl !== lastTripId) {
+        // 標記已經啟動過，避免重複跳轉
+        sessionStorage.setItem('session_initialized', 'true');
+
+        // 既然是剛點開圖示，我們強行無視 start_url 帶的參數
+        // 抓取上次看到的行程與對應的金鑰
+        const savedKey = localStorage.getItem(`key_${lastTripId}`) || "";
+        const redirectUrl = `index.html?trip=${lastTripId}${savedKey ? '&key=' + savedKey : ''}`;
         
-        // 這是最重要的一步：奪回網址控制權
+        // 奪回控制權，直接取代網址
         window.location.replace(redirectUrl);
         return; 
     }
 
-    // --- 剩下的載入流程 ---
-    // 確定要使用的 ID（這時不管是網址帶的，還是跳轉後的，都會一致）
-    const activeTripId = tripIdFromUrl || lastTripId;
+    // 標記初始化完成，後續的 location.href 切換（如 switchTrip）就不會觸發上面的判斷
+    sessionStorage.setItem('session_initialized', 'true');
 
+    // --- 之後的流程保持正常載入 ---
+    const activeTripId = tripIdFromUrl || lastTripId;
     if (!activeTripId) {
         showErrorPage("請提供行程 ID");
         return;
     }
 
-    // 更新權限與記憶
-    if (keyFromUrl) {
-        localStorage.setItem(`key_${activeTripId}`, keyFromUrl);
+    // 只有網址明確給予 KEY 時才更新 localStorage
+    if (keyFromUrl !== null) {
+        if (keyFromUrl.trim() !== "") {
+            localStorage.setItem(`key_${activeTripId}`, keyFromUrl);
+        } else {
+            localStorage.removeItem(`key_${activeTripId}`);
+        }
     }
+
     localStorage.setItem('last_active_trip', activeTripId);
     
     const currentKey = localStorage.getItem(`key_${activeTripId}`) || "";

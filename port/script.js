@@ -6,30 +6,39 @@ async function initPlatform() {
     const urlParams = new URLSearchParams(window.location.search);
     const tripId = urlParams.get('trip');
     const keyFromUrl = urlParams.get('key');
+    
+    // 從本地抓取上一次成功載入的行程
+    const lastTripId = localStorage.getItem('last_active_trip');
 
-    // --- 1. PWA 啟動與跳轉判斷 ---
-    if (!tripId) {
-        const lastTripId = localStorage.getItem('last_active_trip');
-        if (lastTripId) {
-            // 注意：這裡我們「不」自動帶入 Key，因為你希望沒帶 Key 就是訪客
-            // 除非你點的是帶有 Key 的桌面捷徑
-            window.location.replace(`index.html?trip=${lastTripId}`);
-            return;
-        }
+    // --- 1. PWA 啟動與強制導向邏輯 ---
+    // 判斷條件：
+    // 如果網址完全沒 tripId (純 index.html 開啟)
+    // 或者 網址的 tripId 與上次紀錄不符 (代表是點擊了寫死網址的 PWA 圖示啟動)
+    // 且 網址沒有帶 KEY (因為帶 KEY 通常是點了特定連結，那種情況我們聽網址的)
+    if (!keyFromUrl && lastTripId && tripId !== lastTripId) {
+        // 如果網址有帶其他 tripId，先檢查是不是因為 PWA start_url 造成的
+        // 我們優先跳轉到使用者最後看到的行程
+        const savedKey = localStorage.getItem(`key_${lastTripId}`) || "";
+        window.location.replace(`index.html?trip=${lastTripId}${savedKey ? '&key='+savedKey : ''}`);
+        return;
+    }
+
+    // 如果連 lastTripId 都沒有，且網址也沒 tripId，才報錯
+    if (!tripId && !lastTripId) {
         showErrorPage("請提供行程 ID");
         return;
     }
 
-    // --- 2. 最高準則：網址決定權限 ---
+    // --- 2. 最高準則：更新紀錄與權限 ---
+    // 這裡我們維持你原本的邏輯：只要網址有帶 KEY 就更新，沒帶就清空
     if (keyFromUrl && keyFromUrl.trim() !== "") {
-        // 只有網址明確帶著非空字串的 KEY，才存入並開啟管理權限
         localStorage.setItem(`key_${tripId}`, keyFromUrl);
     } else {
-        // 只要網址沒 KEY (或是 key= 空值)，就刪除該行程的本地 KEY，強制變訪客
+        // 如果是從 PWA 跳轉過來的，上面那段 replace 已經帶了 key，所以這裡不會誤刪
         localStorage.removeItem(`key_${tripId}`);
     }
 
-    // 更新最後活動行程紀錄
+    // 確定進入該行程，更新最後活動紀錄
     localStorage.setItem('last_active_trip', tripId);
     
     const currentKey = localStorage.getItem(`key_${tripId}`) || "";

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'travel-pro-v9'; // 更新版本號
+const CACHE_NAME = 'travel-pro-firebase-v10'; // 更新版本號
 const ASSETS = [
   './',
   './index.html',

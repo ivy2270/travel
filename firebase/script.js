@@ -21,23 +21,20 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // ============================================================
-// ImgBB 圖片上傳
+// ImgBB 圖片上傳（透過 GAS 中轉，保護 API Key）
 // ============================================================
-// 把這個網址換成你的 GAS Web App 網址
 const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu8Z-Wg2nDPEtkms_9RrgT5XyY798KT_NXa6Z5qdmow5VxE9xmVaTAA/exec";
 
 async function uploadToImgBB(base64Data) {
     const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-    
     const res = await fetch(GAS_UPLOAD_URL, {
         method: 'POST',
         body: JSON.stringify({ image: base64 }),
         headers: { 'Content-Type': 'application/json' }
     });
-    
     const data = await res.json();
     if (data.success) return data.url;
-    throw new Error('上傳失敗：' + data.error);
+    throw new Error('ImgBB 上傳失敗：' + data.error);
 }
 
 // ============================================================
@@ -287,7 +284,7 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
                 };
             });
 
-            // ── 圖片上傳（ImgBB）──
+            // ── 圖片上傳（透過 GAS 中轉）──
             const compressAndUpload = async (event) => {
                 const files = event.target.files;
                 if (!files.length) return;

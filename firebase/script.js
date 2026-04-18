@@ -23,21 +23,15 @@ const db = getFirestore(app);
 // ============================================================
 // ImgBB 圖片上傳（透過 GAS 中轉，保護 API Key）
 // ============================================================
-const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu8Z-Wg2nDPEtkms_9RrgT5XyY798KT_NXa6Z5qdmow5VxE9xmVaTAA/exec";
+const GAS_UPLOAD_URL = ""https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu8Z-Wg2nDPEtkms_9RrgT5XyY798KT_NXa6Z5qdmow5VxE9xmVaTAA/exec";
 
 async function uploadToImgBB(base64Data) {
     const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-    
-    // 用 FormData 取代 JSON，避免觸發 CORS preflight
-    const formData = new FormData();
-    formData.append('image', base64);
-    
     const res = await fetch(GAS_UPLOAD_URL, {
         method: 'POST',
-        body: formData,
-        // 不設定 Content-Type header，讓瀏覽器自動處理
+        body: JSON.stringify({ image: base64 }),
+        headers: { 'Content-Type': 'application/json' }
     });
-    
     const data = await res.json();
     if (data.success) return data.url;
     throw new Error('ImgBB 上傳失敗：' + data.error);
@@ -78,7 +72,8 @@ async function initPlatform() {
         const catalogDoc = await getDoc(doc(db, 'catalog', activeTripId));
         if (!catalogDoc.exists()) { showErrorPage(`找不到行程: ${activeTripId}`); return; }
         const catalogData = catalogDoc.data();
-        const finalTheme = catalogData.theme_id || 'spring';
+        const previewTheme = urlParams.get('preview_theme');
+        const finalTheme = previewTheme || catalogData.theme_id || 'spring';
         updatePwaManifest("拾光旅圖", activeTripId, currentKey, finalTheme);
         startApp(catalogData, activeTripId, finalTheme);
     } catch (err) {

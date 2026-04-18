@@ -27,11 +27,17 @@ const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu
 
 async function uploadToImgBB(base64Data) {
     const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+    
+    // 用 FormData 取代 JSON，避免觸發 CORS preflight
+    const formData = new FormData();
+    formData.append('image', base64);
+    
     const res = await fetch(GAS_UPLOAD_URL, {
         method: 'POST',
-        body: JSON.stringify({ image: base64 }),
-        headers: { 'Content-Type': 'application/json' }
+        body: formData,
+        // 不設定 Content-Type header，讓瀏覽器自動處理
     });
+    
     const data = await res.json();
     if (data.success) return data.url;
     throw new Error('ImgBB 上傳失敗：' + data.error);

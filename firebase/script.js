@@ -23,7 +23,7 @@ const db = getFirestore(app);
 // ============================================================
 // ImgBB 圖片上傳（透過 GAS 中轉，保護 API Key）
 // ============================================================
-const GAS_UPLOAD_URL = ""https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu8Z-Wg2nDPEtkms_9RrgT5XyY798KT_NXa6Z5qdmow5VxE9xmVaTAA/exec";
+const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu8Z-Wg2nDPEtkms_9RrgT5XyY798KT_NXa6Z5qdmow5VxE9xmVaTAA/exec";
 
 async function uploadToImgBB(base64Data) {
     const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;

@@ -23,17 +23,21 @@ const db = getFirestore(app);
 // ============================================================
 // ImgBB 圖片上傳
 // ============================================================
-const IMGBB_API_KEY = "5e61a35a0d9d456bf560453fd10a675f";
+// 把這個網址換成你的 GAS Web App 網址
+const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu8Z-Wg2nDPEtkms_9RrgT5XyY798KT_NXa6Z5qdmow5VxE9xmVaTAA/exec";
 
 async function uploadToImgBB(base64Data) {
     const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-    const formData = new FormData();
-    formData.append('image', base64);
-    formData.append('key', IMGBB_API_KEY);
-    const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData });
+    
+    const res = await fetch(GAS_UPLOAD_URL, {
+        method: 'POST',
+        body: JSON.stringify({ image: base64 }),
+        headers: { 'Content-Type': 'application/json' }
+    });
+    
     const data = await res.json();
-    if (data.success) return data.data.url;
-    throw new Error('ImgBB 上傳失敗');
+    if (data.success) return data.url;
+    throw new Error('上傳失敗：' + data.error);
 }
 
 // ============================================================
@@ -284,22 +288,22 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
             });
 
             // ── 圖片上傳（ImgBB）──
-            // 把這個網址換成你的 GAS Web App 網址
-const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbyC1DsqSQDtxGbXu8Z-Wg2nDPEtkms_9RrgT5XyY798KT_NXa6Z5qdmow5VxE9xmVaTAA/exec";
-
-async function uploadToImgBB(base64Data) {
-    const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
-    
-    const res = await fetch(GAS_UPLOAD_URL, {
-        method: 'POST',
-        body: JSON.stringify({ image: base64 }),
-        headers: { 'Content-Type': 'application/json' }
-    });
-    
-    const data = await res.json();
-    if (data.success) return data.url;
-    throw new Error('上傳失敗：' + data.error);
-}
+            const compressAndUpload = async (event) => {
+                const files = event.target.files;
+                if (!files.length) return;
+                uploading.value = true;
+                uploadProgress.value = { current: 0, total: files.length };
+                for (let file of files) {
+                    try {
+                        const base64 = await resizeImage(file);
+                        const url = await uploadToImgBB(base64);
+                        if (currentTab.value === 'expense') form.value.image = url;
+                        else { if (!Array.isArray(form.value.image)) form.value.image = []; form.value.image.push(url); }
+                    } catch (e) { console.error(e); showToast("圖片上傳失敗", "error"); }
+                    uploadProgress.value.current++;
+                }
+                uploading.value = false;
+            };
 
             // ── 讀取資料（Firestore）──
             const fetchData = async () => {

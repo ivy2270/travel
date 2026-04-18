@@ -158,32 +158,7 @@
             <p class="text-slate-400 text-sm tracking-[0.2em] font-bold mt-1 uppercase">Travel App Maker</p>
         </div>
 
-        <div class="flex flex-col sm:flex-row gap-4 mb-10 justify-center">
-            <a href="https://docs.google.com/spreadsheets/d/1B6Q1Dg6oLv5sspNFO2e5TMOI8ByYS4NxyvxMrVETIkQ/copy" target="_blank" 
-               class="btn-outline px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-3">
-                <i class="fa-solid fa-file-excel"></i>
-                1. 取得試算表複本
-            </a>
-            <div onclick="toggleModal(true)" 
-               class="btn-outline px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-3">
-                <i class="fa-solid fa-desktop"></i>
-                2. 電腦部署教學
-            </div>
-            <div onclick="toggleMobileModal(true)" 
-               class="btn-outline px-6 py-4 rounded-2xl font-black flex items-center justify-center gap-3 border-amber-400 text-amber-600">
-                <i class="fa-solid fa-mobile-screen-button"></i>
-                2. 手機部署教學
-            </div>
-        </div>
 
-        <div class="mb-8 flex items-center justify-center text-center">
-            <div class="bg-amber-50/80 border border-amber-200/50 px-6 py-3 rounded-2xl flex items-center gap-3 text-amber-700 shadow-sm">
-                <i class="fa-solid fa-circle-exclamation animate-pulse"></i>
-                <span class="text-xs font-bold tracking-wide">
-                    初次設定建議使用 <span class="underline decoration-2 underline-offset-2">電腦操作</span>，手機用戶請參考專屬教學。
-                </span>
-            </div>
-        </div>
 
         <div class="grid md:grid-cols-2 gap-8 items-stretch">
             <div class="glass-card p-8 md:p-10 flex flex-col">
@@ -290,102 +265,7 @@
         </div>
     </div>
 
-    <div id="guideModal" class="modal-overlay" onclick="toggleModal(false)">
-        <div class="modal-content p-8 md:p-10" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center mb-8">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-desktop text-xl"></i>
-                    </div>
-                    <h2 class="text-2xl font-black text-slate-800">電腦版部署教學</h2>
-                </div>
-                <i class="fa-solid fa-circle-xmark text-3xl text-slate-200 cursor-pointer hover:text-red-400 transition-colors" onclick="toggleModal(false)"></i>
-            </div>
-            
-            <div class="space-y-6 text-left text-sm text-slate-600">
-                <p>1. 點選「建立副本」存入雲端硬碟。</p>
-                <p>2. 開啟試算表，於 <span class="font-bold text-blue-500">SYSTEM</span> 填寫金鑰與設定。</p>
-                <p>3. 點選 <span class="font-bold">擴充功能 > Apps Script</span>。</p>
-                <p>4. 點選右上角 <span class="bg-blue-600 text-white px-2 py-0.5 rounded text-xs">部署</span> > 新部署，對象選「所有人」。</p>
-                <p>5. 完成授權並複製 Web App 網址貼回本頁。</p>
-            </div>
 
-            <button onclick="toggleModal(false)" class="btn-summer w-full mt-10 py-5 rounded-3xl font-black text-lg text-white">
-                我準備好了
-            </button>
-        </div>
-    </div>
-
-    <div id="mobileGuideModal" class="modal-overlay" onclick="toggleMobileModal(false)">
-        <div class="modal-content p-8 md:p-10" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-mobile-screen text-xl"></i>
-                    </div>
-                    <h2 class="text-2xl font-black text-slate-800">手機部署教學</h2>
-                </div>
-                <i class="fa-solid fa-circle-xmark text-3xl text-slate-200 cursor-pointer hover:text-red-400 transition-colors" onclick="toggleMobileModal(false)"></i>
-            </div>
-
-            <a href="https://youtu.be/12X7SDGESgw" target="_blank" class="mb-8 block w-full bg-red-50 text-red-600 p-4 rounded-2xl border border-red-100 flex items-center justify-center gap-3 hover:bg-red-100 transition-all">
-                <i class="fa-brands fa-youtube text-2xl"></i>
-                <span class="font-black">點我觀看手機操作示範影片</span>
-            </a>
-            
-            <div class="space-y-8 text-left">
-                <div class="flex gap-4">
-                    <div class="step-badge bg-amber-500 text-white">1</div>
-                    <div>
-                        <h4 class="font-black text-slate-800">複製副本與切換模式</h4>
-                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                            點擊「取得副本」後，請點瀏覽器選單並勾選 <span class="text-red-500 font-bold">「要求電腦版網站」</span>。這非常重要，否則無法進入 Script 編輯器。
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex gap-4">
-                    <div class="step-badge bg-amber-500">2</div>
-                    <div>
-                        <h4 class="font-black text-slate-800">執行初始化腳本</h4>
-                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                            進入 <span class="font-bold">擴充功能 > Apps Script</span>，在左側選單點擊 <span class="text-blue-500 font-bold">setup.gs</span>。點擊上方的 <span class="font-bold">「執行」</span>。
-                        </p>
-                        <div class="mt-2 bg-slate-50 p-3 rounded-xl border border-slate-100 text-[11px] text-slate-600">
-                            <i class="fa-solid fa-shield-check mr-1"></i> <strong>授權流程：</strong> 審查權限 > 選帳號 > 進階 > 前往 (不安全) > 全選權限 > 允許。
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex gap-4">
-                    <div class="step-badge bg-amber-500 text-white">3</div>
-                    <div>
-                        <h4 class="font-black text-slate-800">正式部署網址</h4>
-                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                            點選右上角 <span class="bg-blue-600 text-white px-1.5 py-0.5 rounded text-[10px]">部署</span> > <span class="font-bold">新部署</span>。
-                            設定「誰有權限存取」為 <span class="font-bold text-red-500">「所有人」</span>。最後再次完成授權並複製生成的網址。
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex gap-4">
-                    <div class="step-badge bg-amber-500 text-white">4</div>
-                    <div>
-                        <h4 class="font-black text-slate-800">填寫資料夾 ID</h4>
-                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                            回到試算表的 <span class="font-bold text-blue-500">System</span> 分頁，確認金鑰與腳本自動產生的資料夾 ID 是否正確，再回本頁提交。
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <button onclick="toggleMobileModal(false)" class="btn-summer w-full mt-10 py-5 rounded-3xl font-black text-lg text-white">
-                我明白了，開始挑戰
-            </button>
-        </div>
-    </div>
-
-    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc, getDocs, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
 
@@ -401,14 +281,6 @@
         const db = getFirestore(app);
 
         // UI 工具函式掛到 window，讓 HTML onclick 可以呼叫
-        window.toggleModal = (show) => {
-            document.getElementById('guideModal').style.display = show ? 'flex' : 'none';
-            document.body.style.overflow = show ? 'hidden' : 'auto';
-        };
-        window.toggleMobileModal = (show) => {
-            document.getElementById('mobileGuideModal').style.display = show ? 'flex' : 'none';
-            document.body.style.overflow = show ? 'hidden' : 'auto';
-        };
         window.togglePassword = (inputId, el) => {
             const input = document.getElementById(inputId);
             if (input.type === 'password') { input.type = 'text'; el.classList.replace('fa-eye-slash', 'fa-eye'); }

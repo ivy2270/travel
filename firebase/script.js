@@ -223,7 +223,16 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
                     const debtors = exp.debtor ? exp.debtor.split(',') : [];
                     const matchDebtor = debtFilter.value.debtor === 'all' || debtors.includes(debtFilter.value.debtor);
                     return matchPayer && matchDebtor;
-                }).sort((a, b) => rawToDateStr(b.date).localeCompare(rawToDateStr(a.date)) || (Number(b.id) - Number(a.id)));
+                }).sort((a, b) => {
+                    const dateComparison = rawToDateStr(b.date).localeCompare(rawToDateStr(a.date)); // Newest date first
+                    if (dateComparison !== 0) return dateComparison;
+
+                    const createdAtA = a.createdAt ? (a.createdAt.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime()) : 0;
+                    const createdAtB = b.createdAt ? (b.createdAt.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime()) : 0;
+                    if (createdAtA !== createdAtB) return createdAtB - createdAtA; // Newest creation time first
+
+                    return (a.item || "").localeCompare(b.item || "");
+                });
             });
 
             const filteredTotalTWD = computed(() => {
@@ -240,11 +249,19 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
                 });
                 return results.sort((a, b) => {
                     const statusA = isWishDone(a) ? 1 : 0, statusB = isWishDone(b) ? 1 : 0;
-                    if (statusA !== statusB) return statusA - statusB;
-                    const parseDate = (obj) => { const t = obj.updatetime || obj.updateTime || ""; if (!t) return 0; const d = new Date(String(t).replace(/-/g, '/')); return isNaN(d.getTime()) ? 0 : d.getTime(); };
-                    const tA = parseDate(a), tB = parseDate(b);
-                    if (tB !== tA) return tB - tA;
-                    return (BigInt(String(b.id || 0).replace(/\D/g, '')) > BigInt(String(a.id || 0).replace(/\D/g, ''))) ? 1 : -1;
+                    if (statusA !== statusB) return statusA - statusB; // Done items at the bottom
+                    const parseTime = (obj) => {
+                        const t = obj.updateTime || obj.createdAt || "";
+                        if (!t) return 0;
+                        // Firebase Timestamp objects have a toDate() method
+                        if (t.toDate) return t.toDate().getTime();
+                        // ISO string or similar
+                        const d = new Date(String(t).replace(/-/g, '/'));
+                        return isNaN(d.getTime()) ? 0 : d.getTime();
+                    };
+                    const tA = parseTime(a), tB = parseTime(b);
+                    // Sort by last updated time (descending: newest first)
+                    return tB - tA;
                 });
             });
 
@@ -426,7 +443,7 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
                     for (const id of ids) {
                         const target = allData.value.wishes.find(w => w.id === id);
                         if (!target) continue;
-                        try { const { id: docId, ...rest } = target; await updateDoc(doc(db, 'trips', tripId, 'wishes', docId), { ...rest, updateTime: new Date().toISOString() }); }
+                        try { const { id: docId, ...rest } = target; await updateDoc(doc(db, 'trips', tripId, 'wishes', docId), { ...rest, updateTime: serverTimestamp() }); }
                         catch (e) { console.error("Sync failed for wish:", id); }
                     }
                 }, 1500);

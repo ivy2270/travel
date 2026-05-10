@@ -102,7 +102,7 @@
                         </div>
                     </div>
 
-                    <div v-if="isAdmin" class="absolute top-2 right-2 flex" :class="{'opacity-100': expandedItems.includes('itinerary_' + item.id), 'opacity-0': !expandedItems.includes('itinerary_' + item.id)}">
+                    <div v-if="isAdmin && !isShareMode" class="absolute top-2 right-2 flex" :class="{'opacity-100': expandedItems.includes('itinerary_' + item.id), 'opacity-0': !expandedItems.includes('itinerary_' + item.id)}">
                         <button @click.stop="openEditModal(item)" class="p-2 text-slate-300 hover:text-blue-500 transition-colors"><i class="fa-solid fa-pen text-xs"></i></button>
                         <button @click.stop="deleteItem('Itinerary', item.id)" class="p-2 text-slate-300 hover:text-red-500 transition-colors"><i class="fa-solid fa-trash text-xs"></i></button>
                     </div>
@@ -159,7 +159,7 @@
                                 <th>項目 / 方式</th>
                                 <th>金額</th>
                                 <th v-if="travelersAndCats.travelers.length > 1">分攤</th>
-                                <th v-if="isAdmin" class="text-center">操作</th>
+                                <th v-if="isAdmin && !isShareMode" class="text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -181,7 +181,7 @@
                                     <div class="text-[10px]"><span class="text-blue-500 font-bold">{{ exp.payer }}</span> 付</div>
                                     <div class="text-[9px] text-slate-400 truncate max-w-[60px]">→ {{ exp.debtor }}</div>
                                 </td>
-                                <td v-if="isAdmin">
+                                <td v-if="isAdmin && !isShareMode">
                                     <div class="flex gap-1.5 justify-center">
                                         <button @click="openEditModal(exp)" class="w-7 h-7 bg-slate-50 text-slate-300 hover:text-blue-500 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-pen text-[10px]"></i></button>
                                         <button @click="deleteItem('Expenses', exp.id)" class="w-7 h-7 bg-red-50/50 text-red-200 hover:text-red-500 rounded-full flex items-center justify-center transition-colors"><i class="fa-solid fa-trash text-[10px]"></i></button>
@@ -242,7 +242,7 @@
                 <div class="flex justify-between items-center pt-3 border-t border-slate-50">
                     <span class="text-[9px] text-slate-400 font-black uppercase tracking-tighter">BY {{ wish.payer }}</span>
                     
-                    <div v-if="isAdmin" class="flex gap-2 transition-opacity duration-300" 
+                    <div v-if="isAdmin && !isShareMode" class="flex gap-2 transition-opacity duration-300" 
                          :class="expandedItems.includes('wish_' + wish.id) ? 'opacity-100' : 'opacity-0 pointer-events-none'">
                         <button @click.stop="openEditModal(wish)" class="p-2 text-slate-300 hover:text-blue-500 transition-colors">
                             <i class="fa-solid fa-pen text-[11px]"></i>
@@ -317,9 +317,18 @@
         <i class="fa-solid fa-cloud-gear mr-2"></i> 行程管理中心
     </h3>
     <p class="text-blue-600 text-xs mb-4 leading-relaxed">
-        若需分享行程連結或建立新行程，請返回管理平台登入。
+        複製下方連結分享行程給他人：
     </p>
     
+    <div class="space-y-2 mb-4">
+        <a :href="'index.html?trip=' + tripId + '&v=s'" target="_blank" class="block w-full py-3 bg-slate-400 text-white text-center rounded-xl font-bold shadow-md active:scale-95 transition-all text-xs">
+            <i class="fa-solid fa-share-nodes mr-1"></i> 複製純行程版連結
+        </a>
+        <a :href="'index.html?trip=' + tripId" target="_blank" class="block w-full py-3 bg-slate-400 text-white text-center rounded-xl font-bold shadow-md active:scale-95 transition-all text-xs">
+            <i class="fa-solid fa-users mr-1"></i> 複製訪客版連結
+        </a>
+    </div>
+
     <a href="https://apps.rainchord.com/travel/port/portal.html" 
        target="_blank" 
        rel="noopener noreferrer"
@@ -457,7 +466,7 @@
             </div>
         </div>
 
-        <nav class="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 p-3 flex z-40 shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
+        <nav v-if="!isShareMode" class="fixed bottom-0 inset-x-0 bg-white/90 backdrop-blur-xl border-t border-slate-100 p-3 flex z-40 shadow-[0_-8px_30px_rgba(0,0,0,0.05)]">
     <template v-for="(name, key) in tabNames" :key="key">
         <button v-if="key !== 'setting' || isAdmin" 
                 @click="currentTab = key" 
@@ -470,7 +479,7 @@
     </template>
 </nav>
 
-        <button v-if="isAdmin && currentTab !== 'setting'" 
+        <button v-if="isAdmin && !isShareMode && currentTab !== 'setting'" 
         @click="openAddModal" 
         class="fixed right-6 bottom-24 w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl shadow-blue-500/50 flex items-center justify-center z-50 active:scale-90 transition-all">
     <i class="fa-solid fa-plus text-xl"></i>

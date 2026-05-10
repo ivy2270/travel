@@ -122,6 +122,7 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
             const isSyncingTrips = ref(false);
             const tempUser = ref("");
             const tempKey = ref("");
+            const isShareMode = ref(new URLSearchParams(window.location.search).get('v') === 's');
             const currentTab = ref('itinerary');
             const loading = ref(false);
             const uploading = ref(false);
@@ -266,7 +267,7 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
             });
 
             const handleSwipe = () => {
-                if (zoomScale.value > 1.1) return;
+                if (isShareMode.value || zoomScale.value > 1.1) return;
                 const diffX = touchState.value.startX - touchState.value.endX;
                 const diffY = touchState.value.startY - touchState.value.endY;
                 if (Math.abs(diffX) > 100 && Math.abs(diffY) < 40 && Math.abs(diffX) > Math.abs(diffY) * 3) {
@@ -501,6 +502,9 @@ function startApp(BOOT_CONFIG, tripId, themeOverride) {
             const getCollapsedText = (text) => { if (!text) return ""; return text.replace(/- \[[x ]\]/g, '').replace(/\n/g, ' '); };
 
             return {
+                tripId,
+                USER_KEY,
+                isShareMode,
                 identity, myTrips, isSyncingTrips, tempUser, tempKey, saveAndSyncIdentity, switchTrip, fetchMyTrips,
                 isAdmin, toast, showToast, categoryColorMap, getCategoryColorClass,
                 currentTab, loading, uploading, uploadProgress, allData, tabNames, tabIcons,

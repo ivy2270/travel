@@ -45,11 +45,12 @@ async function uploadToImgBB(base64Data) {
         const data = await res.json();
         
         if (data.success) {
-            console.log('上傳成功:', data.url);
-            return data.url;
-        } else {
-            throw new Error(data.error || '未知錯誤');
-        }
+    console.log('上傳成功:', data.url);
+    return data.url;
+} else {
+    console.error('imgBB 詳細錯誤:', JSON.stringify(data)); // ← 改這行
+    throw new Error(data.error || '未知錯誤');
+}
     } catch (error) {
         console.error('GAS 中轉上傳失敗:', error);
         throw new Error('圖片上傳失敗，請稍後再試');

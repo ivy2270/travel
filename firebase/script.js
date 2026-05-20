@@ -23,36 +23,26 @@ const db = getFirestore(app);
 // ============================================================
 // ImgBB 圖片上傳（透過 GAS 中轉，保護 API Key）
 // ============================================================
-const GAS_UPLOAD_URL = "https://script.google.com/macros/s/AKfycbzNS0ICDDl1RkpZfi42nZWE2Toprs7DZzMzRGwS4BnQ4J2fSzKWNMaJDNPlq9VZcsrnOg/exec";
-
 async function uploadToImgBB(base64Data) {
-    // 1. 處理 Base64，確保不含 data:image/jpeg;base64, 等前綴
     const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
     
-    // 2. 使用 URLSearchParams 封裝，這會以 application/x-www-form-urlencoded 格式送出
-    // 這是關鍵：它被瀏覽器視為簡單請求，不會觸發 CORS Preflight
     const params = new URLSearchParams();
+    params.append('key', 'fee974ce3399131616ff7b1eaff219dd');  // key 直接寫在前端
     params.append('image', base64);
 
     try {
-        const res = await fetch(GAS_UPLOAD_URL, {
+        const res = await fetch('https://api.imgbb.com/1/upload', {
             method: 'POST',
-            body: params, // 直接傳送 params 物件
-            // 🚩 這裡絕對不要寫 headers: { 'Content-Type': '...' }
+            body: params,
         });
-
-        // GAS 回傳的是 JSON，直接解析即可
         const data = await res.json();
-        
         if (data.success) {
-    console.log('上傳成功:', data.url);
-    return data.url;
-} else {
-    console.error('imgBB 詳細錯誤:', JSON.stringify(data)); // ← 改這行
-    throw new Error(data.error || '未知錯誤');
-}
+            return data.data.url;
+        } else {
+            throw new Error(data.error?.message || '未知錯誤');
+        }
     } catch (error) {
-        console.error('GAS 中轉上傳失敗:', error);
+        console.error('imgBB 上傳失敗:', error);
         throw new Error('圖片上傳失敗，請稍後再試');
     }
 }

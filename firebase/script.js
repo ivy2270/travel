@@ -59,7 +59,7 @@ async function initPlatform() {
     const lastTripId = localStorage.getItem('last_active_trip');
     const isAppJustStarted = !sessionStorage.getItem('session_initialized');
 
-    if (isAppJustStarted && lastTripId && tripIdFromUrl !== lastTripId) {
+    if (isAppJustStarted && lastTripId && !tripIdFromUrl) {
         sessionStorage.setItem('session_initialized', 'true');
         const savedKey = localStorage.getItem(`key_${lastTripId}`) || "";
         window.location.replace(`index.html?trip=${lastTripId}${savedKey ? '&key=' + savedKey : ''}`);
